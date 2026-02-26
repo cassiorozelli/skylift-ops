@@ -1,0 +1,73 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { supabase } from "@/lib/supabaseClient"
+import { Button } from "@/components/ui/button"
+import { Plane, LogOut, Users } from "lucide-react"
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const router = useRouter()
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.push("/login")
+        return
+      }
+
+      const { data } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle()
+
+      const role = (data as { role?: string } | null)?.role
+      setIsAdmin(role === "admin")
+      setReady(true)
+    }
+
+    checkAuth()
+  }, [router])
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    router.push("/login")
+    router.refresh()
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-40 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
+        <div className="container flex h-14 items-center justify-between">
+          <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
+            <Plane className="h-5 w-5 text-primary" />
+            Skylift Ops
+          </Link>
+          <div className="flex items-center gap-2">
+            {ready && isAdmin && (
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/dashboard/usuarios" className="gap-2">
+                  <Users className="h-4 w-4" />
+                  Gerenciar Usuários
+                </Link>
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" onClick={handleSignOut} title="Sair">
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </header>
+      <main className="container py-6">{children}</main>
+    </div>
+  )
+}
