@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 import { supabase } from "@/lib/supabaseClient"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -47,22 +46,26 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-primary/20 text-primary mb-4">
-            <Plane className="w-8 h-8" />
+    <div className="min-h-screen flex items-center justify-center bg-[#ffffff] px-4 py-8 sm:px-6">
+      <div className="w-full max-w-[400px] space-y-10">
+        <div className="text-center space-y-3">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary/10 text-primary">
+            <Plane className="w-7 h-7" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Skylift Ops</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            Skylift Ops
+          </h1>
           <p className="text-muted-foreground text-sm">
             Aerorio Táxi Aéreo — Sistema de Operações
           </p>
         </div>
 
-        <div className="rounded-xl border bg-card p-6 shadow-lg">
-          <form onSubmit={handleLogin} className="space-y-4">
+        <div className="rounded-xl border border-border bg-card p-6 sm:p-8 shadow-sm">
+          <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
+              <Label htmlFor="email" className="text-foreground font-medium">
+                E-mail
+              </Label>
               <Input
                 id="email"
                 type="email"
@@ -71,11 +74,12 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
-                className="bg-background"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
+              <Label htmlFor="password" className="text-foreground font-medium">
+                Senha
+              </Label>
               <Input
                 id="password"
                 type="password"
@@ -84,15 +88,18 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
-                className="bg-background"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button
+              type="submit"
+              className="w-full h-11 sm:h-12 text-base font-medium"
+              disabled={loading}
+            >
               {loading ? "Entrando..." : "Entrar"}
             </Button>
           </form>
 
-          <p className="mt-4 text-center text-xs text-muted-foreground">
+          <p className="mt-5 text-center text-sm text-muted-foreground">
             Use suas credenciais do sistema para acessar.
           </p>
         </div>

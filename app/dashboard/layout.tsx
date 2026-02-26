@@ -45,29 +45,38 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
-        <div className="container flex h-14 items-center justify-between">
-          <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
+    <div className="min-h-screen bg-[#ffffff]">
+      <header className="sticky top-0 z-40 border-b border-border bg-[#ffffff]">
+        <div className="container flex h-14 sm:h-16 items-center justify-between px-4 sm:px-6">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2 text-base font-medium text-foreground hover:text-primary transition-colors"
+          >
             <Plane className="h-5 w-5 text-primary" />
             Skylift Ops
           </Link>
           <div className="flex items-center gap-2">
             {ready && isAdmin && (
-              <Button variant="outline" size="sm" asChild>
-                <Link href="/dashboard/usuarios" className="gap-2">
+              <Button variant="outline" size="sm" asChild className="h-10 min-w-[44px] sm:min-w-0">
+                <Link href="/dashboard/usuarios" className="gap-2 px-4">
                   <Users className="h-4 w-4" />
-                  Gerenciar Usuários
+                  <span className="hidden sm:inline">Gerenciar Usuários</span>
                 </Link>
               </Button>
             )}
-            <Button variant="ghost" size="icon" onClick={handleSignOut} title="Sair">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleSignOut}
+              title="Sair"
+              className="h-10 w-10 min-h-[44px] min-w-[44px]"
+            >
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </header>
-      <main className="container py-6">{children}</main>
+      <main className="container px-4 py-6 sm:px-6 sm:py-8">{children}</main>
     </div>
   )
 }

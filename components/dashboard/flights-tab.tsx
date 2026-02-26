@@ -37,7 +37,7 @@ export function FlightsTab({ table }: Props) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
+      <div className="flex items-center justify-center py-16 sm:py-20">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     )
@@ -45,14 +45,14 @@ export function FlightsTab({ table }: Props) {
 
   if (flights.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
+      <div className="rounded-lg border border-dashed border-border bg-muted/30 p-8 sm:p-12 text-center text-muted-foreground text-sm">
         Nenhum voo encontrado.
       </div>
     )
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
       {flights.map((flight) => (
         <FlightCard
           key={flight.id}

@@ -32,47 +32,39 @@ export function FlightCard({ flight, table, onUpdate }: Props) {
   const piloto1 = flight.piloto1?.trim() || "—"
   const piloto2 = flight.piloto2?.trim() || "—"
 
+  const fields = [
+    { label: "Data", value: formatDate(flight.data) },
+    { label: "Hora", value: flight.hora || "—" },
+    { label: "Aeronave", value: flight.aeronave || "—" },
+    { label: "Destino", value: flight.destino || "—" },
+    { label: "Passageiros", value: flight.passageiros || "—" },
+    { label: "Piloto 1", value: piloto1 },
+    { label: "Piloto 2", value: piloto2 },
+  ]
+
   return (
     <>
-      <Card className="shadow-md hover:shadow-lg transition-shadow">
-        <CardContent className="pt-6">
-          <div className="grid gap-3 text-sm sm:grid-cols-2">
-            <div>
-              <span className="text-muted-foreground">Data:</span>{" "}
-              {formatDate(flight.data)}
-            </div>
-            <div>
-              <span className="text-muted-foreground">Hora:</span>{" "}
-              {flight.hora || "—"}
-            </div>
-            <div>
-              <span className="text-muted-foreground">Aeronave:</span>{" "}
-              {flight.aeronave || "—"}
-            </div>
-            <div>
-              <span className="text-muted-foreground">Destino:</span>{" "}
-              {flight.destino || "—"}
-            </div>
-            <div>
-              <span className="text-muted-foreground">Passageiros:</span>{" "}
-              {flight.passageiros || "—"}
-            </div>
-            <div>
-              <span className="text-muted-foreground">Piloto 1:</span> {piloto1}
-            </div>
-            <div>
-              <span className="text-muted-foreground">Piloto 2:</span> {piloto2}
-            </div>
+      <Card className="w-full overflow-hidden border-border shadow-sm hover:shadow-md transition-shadow">
+        <CardContent className="p-4 sm:p-5">
+          <div className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+            {fields.map(({ label, value }) => (
+              <div key={label} className="min-w-0">
+                <span className="block text-muted-foreground text-xs font-medium mb-0.5">
+                  {label}
+                </span>
+                <span className="text-foreground break-words">{value}</span>
+              </div>
+            ))}
           </div>
         </CardContent>
-        <CardFooter className="border-t pt-4">
+        <CardFooter className="border-t border-border p-4 sm:p-5 pt-4">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setEditOpen(true)}
-            className="gap-2"
+            className="h-11 min-h-[44px] w-full sm:w-auto sm:min-w-0 gap-2 font-medium"
           >
-            <Pencil className="h-4 w-4" />
+            <Pencil className="h-4 w-4 shrink-0" />
             Editar pilotos
           </Button>
         </CardFooter>

@@ -73,42 +73,55 @@ export function EditPilotModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="w-[calc(100%-2rem)] max-w-md mx-4 sm:mx-0 p-4 sm:p-6 rounded-lg shadow-lg border border-border">
         <DialogHeader>
-          <DialogTitle>Editar pilotos</DialogTitle>
+          <DialogTitle className="text-lg font-semibold text-foreground">
+            Editar pilotos
+          </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="piloto1">Piloto 1</Label>
+            <Label htmlFor="piloto1" className="text-foreground font-medium">
+              Piloto 1
+            </Label>
             <Input
               id="piloto1"
               value={piloto1}
               onChange={(e) => setPiloto1(e.target.value)}
               placeholder="Nome do piloto"
               disabled={loading}
+              className="h-11"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="piloto2">Piloto 2</Label>
+            <Label htmlFor="piloto2" className="text-foreground font-medium">
+              Piloto 2
+            </Label>
             <Input
               id="piloto2"
               value={piloto2}
               onChange={(e) => setPiloto2(e.target.value)}
               placeholder="Nome do piloto (opcional)"
               disabled={loading}
+              className="h-11"
             />
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col-reverse gap-3 sm:flex-row sm:gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
+              className="w-full sm:w-auto h-11 min-h-[44px]"
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full sm:w-auto h-11 min-h-[44px]"
+            >
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin shrink-0" />}
               Salvar
             </Button>
           </DialogFooter>

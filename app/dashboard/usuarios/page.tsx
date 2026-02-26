@@ -45,35 +45,40 @@ export default function UsuariosPage() {
 
   return (
     <div className="space-y-6">
-      <Button variant="ghost" size="sm" asChild>
+      <Button variant="ghost" size="sm" asChild className="h-11 min-h-[44px] -ml-2">
         <Link href="/dashboard" className="gap-2">
           <ArrowLeft className="h-4 w-4" />
           Voltar ao Dashboard
         </Link>
       </Button>
 
-      <Card>
+      <Card className="border-border shadow-sm">
         <CardHeader>
           <CardTitle>Gerenciar Usuários</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-[15px] leading-relaxed">
             A gestão de usuários é feita diretamente no painel do Supabase.
             Acesse{" "}
             <a
               href="https://supabase.com/dashboard"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary underline hover:no-underline"
+              className="text-primary underline hover:no-underline font-medium"
             >
               Supabase Dashboard
             </a>{" "}
             → Authentication → Users para criar e gerenciar contas.
           </p>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
             Após criar um usuário no Auth, adicione-o na tabela{" "}
-            <code className="rounded bg-muted px-1 py-0.5">profiles</code> com
-            o campo <code className="rounded bg-muted px-1 py-0.5">role</code>{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5 text-foreground font-mono text-xs">
+              profiles
+            </code>{" "}
+            com o campo{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5 text-foreground font-mono text-xs">
+              role
+            </code>{" "}
             como &quot;admin&quot; ou &quot;operacoes&quot;.
           </p>
         </CardContent>
