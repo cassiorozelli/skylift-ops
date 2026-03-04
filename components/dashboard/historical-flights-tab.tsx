@@ -2,31 +2,167 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabaseClient"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { HistoricalFlightCard } from "./historical-flight-card"
 import type { HistoricalFlight, TipoDetectado } from "@/types/database"
 import { Loader2 } from "lucide-react"
 
-const TIPO_OPTIONS: { value: "" | TipoDetectado; label: string }[] = [
+const MONTHS = [
   { value: "", label: "Todos" },
-  { value: "helicoptero", label: "Helicóptero" },
-  { value: "mono", label: "Monomotor" },
-  { value: "jato", label: "Jato" },
+  { value: "1", label: "Janeiro" },
+  { value: "2", label: "Fevereiro" },
+  { value: "3", label: "Março" },
+  { value: "4", label: "Abril" },
+  { value: "5", label: "Maio" },
+  { value: "6", label: "Junho" },
+  { value: "7", label: "Julho" },
+  { value: "8", label: "Agosto" },
+  { value: "9", label: "Setembro" },
+  { value: "10", label: "Outubro" },
+  { value: "11", label: "Novembro" },
+  { value: "12", label: "Dezembro" },
 ]
 
+const TIPO_TABS: { value: TipoDetectado; label: string }[] = [
+  { value: "mono", label: "Monomotores" },
+  { value: "jato", label: "Jatos" },
+  { value: "helicoptero", label: "Helicópteros" },
+]
+
+function getYears(): { value: string; label: string }[] {
+  const currentYear = new Date().getFullYear()
+  const years = [{ value: "", label: "Todos" }]
+  for (let y = currentYear; y >= currentYear - 10; y--) {
+    years.push({ value: String(y), label: String(y) })
+  }
+  return years
+}
+
+const YEARS = getYears()
+
 export function HistoricalFlightsTab() {
+  const [monthFilter, setMonthFilter] = useState("")
+  const [yearFilter, setYearFilter] = useState("")
+
+  return (
+    <div className="space-y-6">
+      {/* MONTH & YEAR FILTERS */}
+      <div className="flex flex-wrap gap-4 items-end">
+        <div className="space-y-2">
+          <label
+            htmlFor="month-filter"
+            className="block text-sm font-medium text-gray-600"
+          >
+            Mês
+          </label>
+          <select
+            id="month-filter"
+            value={monthFilter}
+            onChange={(e) => setMonthFilter(e.target.value)}
+            className="h-10 min-w-[160px] rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+          >
+            {MONTHS.map((m) => (
+              <option key={m.value || "all"} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-2">
+          <label
+            htmlFor="year-filter"
+            className="block text-sm font-medium text-gray-600"
+          >
+            Ano
+          </label>
+          <select
+            id="year-filter"
+            value={yearFilter}
+            onChange={(e) => setYearFilter(e.target.value)}
+            className="h-10 min-w-[120px] rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+          >
+            {YEARS.map((y) => (
+              <option key={y.value || "all"} value={y.value}>
+                {y.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* AIRCRAFT TYPE SUB-TABS - same structure as Active Flights */}
+      <Tabs defaultValue="mono" className="space-y-4">
+        <TabsList className="w-full grid grid-cols-3 h-auto p-1 gap-1 bg-muted/50 rounded-lg">
+          {TIPO_TABS.map((tab) => (
+            <TabsTrigger
+              key={tab.value}
+              value={tab.value}
+              className="py-3 px-4 text-sm font-medium data-[state=active]:bg-[#ffffff] data-[state=active]:shadow-sm rounded-md"
+            >
+              {tab.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        {TIPO_TABS.map((tab) => (
+          <TabsContent key={tab.value} value={tab.value} className="mt-0">
+            <HistoricalFlightsContentWrapper
+              tipoDetectado={tab.value}
+              monthFilter={monthFilter}
+              yearFilter={yearFilter}
+            />
+          </TabsContent>
+        ))}
+      </Tabs>
+    </div>
+  )
+}
+
+function HistoricalFlightsContentWrapper({
+  tipoDetectado,
+  monthFilter,
+  yearFilter,
+}: {
+  tipoDetectado: TipoDetectado
+  monthFilter: string
+  yearFilter: string
+}) {
   const [flights, setFlights] = useState<HistoricalFlight[]>([])
   const [loading, setLoading] = useState(true)
-  const [tipoFilter, setTipoFilter] = useState<"" | TipoDetectado>("")
 
   const fetchFlights = useCallback(async () => {
     setLoading(true)
     let query = supabase
       .from("flights_history")
       .select("*")
+      .eq("tipo_detectado", tipoDetectado)
       .order("archived_at", { ascending: false })
 
-    if (tipoFilter) {
-      query = query.eq("tipo_detectado", tipoFilter)
+    if (monthFilter || yearFilter) {
+      if (yearFilter) {
+        const year = parseInt(yearFilter, 10)
+        const month = monthFilter ? parseInt(monthFilter, 10) : 0
+        const startDate =
+          month > 0
+            ? `${year}-${String(month).padStart(2, "0")}-01`
+            : `${year}-01-01`
+        const endDate =
+          month > 0
+            ? (() => {
+                const nextMonth = month === 12 ? 1 : month + 1
+                const nextYear = month === 12 ? year + 1 : year
+                return `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`
+              })()
+            : `${year}-12-31T23:59:59`
+        query = query.gte("data", startDate)
+        if (month > 0) {
+          query = query.lt("data", endDate)
+        } else {
+          query = query.lte("data", endDate.split("T")[0])
+        }
+      } else if (monthFilter) {
+        const monthStr = String(parseInt(monthFilter, 10)).padStart(2, "0")
+        query = query.like("data", `%-${monthStr}-%`)
+      }
     }
 
     const { data, error } = await query
@@ -38,7 +174,7 @@ export function HistoricalFlightsTab() {
       setFlights(data ?? [])
     }
     setLoading(false)
-  }, [tipoFilter])
+  }, [tipoDetectado, monthFilter, yearFilter])
 
   useEffect(() => {
     fetchFlights()
@@ -61,35 +197,13 @@ export function HistoricalFlightsTab() {
   }
 
   return (
-    <div className="space-y-4">
-      {/* FILTER */}
-      <div className="flex flex-wrap gap-2">
-        <span className="text-sm font-medium text-gray-600 self-center">
-          Filtrar por tipo:
-        </span>
-        {TIPO_OPTIONS.map((opt) => (
-          <button
-            key={opt.value || "all"}
-            onClick={() => setTipoFilter(opt.value)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              tipoFilter === opt.value
-                ? "bg-gray-800 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
-        {flights.map((flight) => (
-          <HistoricalFlightCard
-            key={`${flight.flight_id}-${flight.archived_at}`}
-            flight={flight}
-          />
-        ))}
-      </div>
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
+      {flights.map((flight) => (
+        <HistoricalFlightCard
+          key={`${flight.flight_id}-${flight.archived_at}`}
+          flight={flight}
+        />
+      ))}
     </div>
   )
 }

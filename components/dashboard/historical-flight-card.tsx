@@ -24,10 +24,7 @@ function formatDate(dateStr: string) {
 function formatArchivedAt(archivedAt: string) {
   try {
     const d = new Date(archivedAt)
-    return d.toLocaleString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
+    return d.toLocaleTimeString("pt-BR", {
       hour: "2-digit",
       minute: "2-digit",
     })
@@ -52,7 +49,7 @@ export function HistoricalFlightCard({ flight }: Props) {
           CANCELADO
         </span>
         <span className="text-xs text-red-600">
-          Arquivado em: {formatArchivedAt(flight.archived_at)}
+          Cancelado às {formatArchivedAt(flight.archived_at)}
         </span>
       </div>
 
@@ -62,17 +59,15 @@ export function HistoricalFlightCard({ flight }: Props) {
         <span className="text-lg font-semibold text-gray-700">{hora}</span>
       </div>
 
-      {/* ROTA */}
-      <div className="px-4 py-3">
-        <h3 className="text-xl font-semibold text-gray-800">
-          {aeronave} → {destino}
-        </h3>
+      {/* HEADER - flight date & time */}
+      <div className="flex justify-between items-center bg-gray-100 px-4 py-3 border-b border-gray-200">
+        <span className="text-lg font-semibold text-gray-700">{dataFormatada}</span>
+        <span className="text-lg font-semibold text-gray-700">{hora}</span>
       </div>
 
-      {/* AERONAVE */}
-      <div className="px-4 pb-3 text-sm text-gray-600">
-        Aeronave:{" "}
-        <span className="font-medium text-gray-700">{aeronave}</span>
+      {/* DESTINATION (main) */}
+      <div className="px-4 py-3">
+        <h3 className="text-xl font-semibold text-gray-800">{destino}</h3>
       </div>
 
       {/* PASSAGEIROS */}
@@ -81,11 +76,11 @@ export function HistoricalFlightCard({ flight }: Props) {
         <p className="text-sm text-gray-700 break-words">{passageiros}</p>
       </div>
 
-      {/* TIPO */}
+      {/* AIRCRAFT */}
       <div className="px-4 pb-4">
-        <span className="inline-flex items-center rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-medium text-gray-700 capitalize">
-          {flight.tipo_detectado}
-        </span>
+        <p className="text-sm text-gray-600">
+          Aeronave: <span className="font-medium text-gray-700">{aeronave}</span>
+        </p>
       </div>
     </Card>
   )
