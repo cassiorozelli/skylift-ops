@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { FlightsTab } from "@/components/dashboard/flights-tab"
+import { HistoricalFlightsTab } from "@/components/dashboard/historical-flights-tab"
 import { Loader2 } from "lucide-react"
 
 export default function DashboardPage() {
@@ -36,42 +37,65 @@ export default function DashboardPage() {
     <div className="space-y-6 sm:space-y-8">
       <div>
         <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
-          Dashboard
+          Flights Dashboard
         </h1>
-        <p className="mt-1 text-sm sm:text-base text-muted-foreground">
-          Operações — Monomotores, Jatos e Helicópteros
-        </p>
       </div>
 
-      <Tabs defaultValue="mono" className="space-y-6">
-        <TabsList className="w-full grid grid-cols-3 h-auto p-1 gap-1 bg-muted/50 rounded-lg">
+      <Tabs defaultValue="active" className="space-y-6">
+        {/* TOP LEVEL: Active | Historical */}
+        <TabsList className="w-full sm:w-auto grid grid-cols-2 h-auto p-1 gap-1 bg-muted/50 rounded-lg">
           <TabsTrigger
-            value="mono"
+            value="active"
             className="py-3 px-4 text-sm font-medium data-[state=active]:bg-[#ffffff] data-[state=active]:shadow-sm rounded-md"
           >
-            Monomotores
+            Active Flights
           </TabsTrigger>
           <TabsTrigger
-            value="jato"
+            value="historical"
             className="py-3 px-4 text-sm font-medium data-[state=active]:bg-[#ffffff] data-[state=active]:shadow-sm rounded-md"
           >
-            Jatos
-          </TabsTrigger>
-          <TabsTrigger
-            value="helicoptero"
-            className="py-3 px-4 text-sm font-medium data-[state=active]:bg-[#ffffff] data-[state=active]:shadow-sm rounded-md"
-          >
-            Helicópteros
+            Historical Flights
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="mono" className="mt-0">
-          <FlightsTab table="mono_flights" />
+
+        {/* ACTIVE FLIGHTS - with sub-tabs */}
+        <TabsContent value="active" className="mt-0 space-y-6">
+          <Tabs defaultValue="mono" className="space-y-4">
+            <TabsList className="w-full grid grid-cols-3 h-auto p-1 gap-1 bg-muted/50 rounded-lg">
+              <TabsTrigger
+                value="mono"
+                className="py-3 px-4 text-sm font-medium data-[state=active]:bg-[#ffffff] data-[state=active]:shadow-sm rounded-md"
+              >
+                Monomotores
+              </TabsTrigger>
+              <TabsTrigger
+                value="jato"
+                className="py-3 px-4 text-sm font-medium data-[state=active]:bg-[#ffffff] data-[state=active]:shadow-sm rounded-md"
+              >
+                Jatos
+              </TabsTrigger>
+              <TabsTrigger
+                value="helicoptero"
+                className="py-3 px-4 text-sm font-medium data-[state=active]:bg-[#ffffff] data-[state=active]:shadow-sm rounded-md"
+              >
+                Helicópteros
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="mono" className="mt-0">
+              <FlightsTab table="mono_flights" />
+            </TabsContent>
+            <TabsContent value="jato" className="mt-0">
+              <FlightsTab table="jato_flights" />
+            </TabsContent>
+            <TabsContent value="helicoptero" className="mt-0">
+              <FlightsTab table="helicoptero_flights" />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
-        <TabsContent value="jato" className="mt-0">
-          <FlightsTab table="jato_flights" />
-        </TabsContent>
-        <TabsContent value="helicoptero" className="mt-0">
-          <FlightsTab table="helicoptero_flights" />
+
+        {/* HISTORICAL FLIGHTS */}
+        <TabsContent value="historical" className="mt-0">
+          <HistoricalFlightsTab />
         </TabsContent>
       </Tabs>
     </div>

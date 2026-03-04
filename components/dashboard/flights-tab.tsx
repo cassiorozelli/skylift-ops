@@ -19,6 +19,7 @@ export function FlightsTab({ table }: Props) {
     const { data, error } = await supabase
       .from(table)
       .select("*")
+      .eq("active", true)
       .order("data", { ascending: true })
       .order("hora", { ascending: true, nullsFirst: false })
 
