@@ -62,6 +62,7 @@ export type HistoricalFlight = {
   passageiros: string | null
   ordem_dia: number | null
   archived_at: string
+  status?: "removed_from_email" | "cancelled" | null
 }
 
 export type EmailProcessingStatus = {

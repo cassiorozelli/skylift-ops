@@ -34,6 +34,7 @@ function formatArchivedAt(archivedAt: string) {
 }
 
 export function HistoricalFlightCard({ flight }: Props) {
+  const isCancelled = flight.status === "cancelled"
   const dataFormatada = formatDate(flight.data)
   const hora = flight.hora || "—"
   const aeronave = flight.aeronave || "—"
@@ -41,47 +42,80 @@ export function HistoricalFlightCard({ flight }: Props) {
   const passageiros = flight.passageiros || "—"
 
   return (
-    <Card className="w-full overflow-hidden rounded-xl border border-red-200 bg-gray-50/80 shadow-sm hover:shadow-md transition-all">
-      {/* CANCELLED BADGE */}
-      <div className="flex items-center justify-between bg-red-50 px-4 py-2.5 border-b border-red-100">
-        <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-red-700">
-          <XCircle className="h-4 w-4" />
-          CANCELADO
-        </span>
-        <span className="text-xs text-red-600">
-          Cancelado às {formatArchivedAt(flight.archived_at)}
-        </span>
-      </div>
-
-      {/* HEADER */}
-      <div className="flex justify-between items-center bg-gray-100 px-4 py-3 border-b border-gray-200">
-        <span className="text-lg font-semibold text-gray-700">{dataFormatada}</span>
-        <span className="text-lg font-semibold text-gray-700">{hora}</span>
-      </div>
+    <Card
+      className={`w-full overflow-hidden rounded-xl shadow-sm hover:shadow-md transition-all ${
+        isCancelled
+          ? "border border-red-200 bg-gray-50/80"
+          : "border border-gray-200 bg-white"
+      }`}
+    >
+      {isCancelled && (
+        /* CANCELLED BADGE - only when status is cancelled */
+        <div className="flex items-center justify-between bg-red-50 px-4 py-2.5 border-b border-red-100">
+          <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-red-700">
+            <XCircle className="h-4 w-4" />
+            CANCELADO
+          </span>
+          <span className="text-xs text-red-600">
+            Cancelado às {formatArchivedAt(flight.archived_at)}
+          </span>
+        </div>
+      )}
 
       {/* HEADER - flight date & time */}
-      <div className="flex justify-between items-center bg-gray-100 px-4 py-3 border-b border-gray-200">
-        <span className="text-lg font-semibold text-gray-700">{dataFormatada}</span>
-        <span className="text-lg font-semibold text-gray-700">{hora}</span>
+      <div
+        className={`flex justify-between items-center px-4 py-3 border-b border-gray-200 ${
+          isCancelled ? "bg-gray-100" : "bg-gray-50"
+        }`}
+      >
+        <span
+          className={`text-lg font-semibold ${isCancelled ? "text-gray-700" : "text-gray-900"}`}
+        >
+          {dataFormatada}
+        </span>
+        <span
+          className={`text-lg font-semibold ${isCancelled ? "text-gray-700" : "text-gray-900"}`}
+        >
+          {hora}
+        </span>
       </div>
 
-      {/* DESTINATION (main) */}
+      {/* ROTA - aeronave → destino (same as active flight card) */}
       <div className="px-4 py-3">
-        <h3 className="text-xl font-semibold text-gray-800">{destino}</h3>
+        <h3
+          className={`text-xl font-semibold ${isCancelled ? "text-gray-800" : "text-gray-900"}`}
+        >
+          {aeronave} → {destino}
+        </h3>
+      </div>
+
+      {/* AERONAVE */}
+      <div className="px-4 pb-3 text-sm text-gray-600">
+        Aeronave:{" "}
+        <span
+          className={`font-medium ${isCancelled ? "text-gray-700" : "text-gray-800"}`}
+        >
+          {aeronave}
+        </span>
       </div>
 
       {/* PASSAGEIROS */}
-      <div className="bg-gray-100/80 mx-4 mb-3 rounded-lg p-3">
-        <p className="text-sm font-semibold text-gray-600 mb-1">👥 Passageiros</p>
-        <p className="text-sm text-gray-700 break-words">{passageiros}</p>
-      </div>
-
-      {/* AIRCRAFT */}
-      <div className="px-4 pb-4">
-        <p className="text-sm text-gray-600">
-          Aeronave: <span className="font-medium text-gray-700">{aeronave}</span>
+      <div
+        className={`mx-4 mb-3 rounded-lg p-3 ${isCancelled ? "bg-gray-100/80" : "bg-gray-50"}`}
+      >
+        <p
+          className={`text-sm font-semibold mb-1 ${isCancelled ? "text-gray-600" : "text-gray-700"}`}
+        >
+          👥 Passageiros
+        </p>
+        <p
+          className={`text-sm break-words ${isCancelled ? "text-gray-700" : "text-gray-800"}`}
+        >
+          {passageiros}
         </p>
       </div>
+
+      {/* No edit button - historical flights are read-only */}
     </Card>
   )
 }
