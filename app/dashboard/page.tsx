@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { EmailProcessingStatus } from "@/components/dashboard/email-processing-status"
 import { FlightsTab } from "@/components/dashboard/flights-tab"
 import { HistoricalFlightsTab } from "@/components/dashboard/historical-flights-tab"
 import { Loader2 } from "lucide-react"
@@ -60,6 +61,7 @@ export default function DashboardPage() {
 
         {/* ACTIVE FLIGHTS - with sub-tabs */}
         <TabsContent value="active" className="mt-0 space-y-6">
+          <EmailProcessingStatus />
           <Tabs defaultValue="mono" className="space-y-4">
             <TabsList className="w-full grid grid-cols-3 h-auto p-1 gap-1 bg-muted/50 rounded-lg">
               <TabsTrigger

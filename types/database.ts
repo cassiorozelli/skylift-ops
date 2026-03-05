@@ -19,6 +19,9 @@ export type Database = {
       flights_history: {
         Row: HistoricalFlight
       }
+      email_processing_status: {
+        Row: EmailProcessingStatus
+      }
       profiles: {
         Row: Profile
         Insert: Omit<Profile, "created_at">
@@ -59,6 +62,14 @@ export type HistoricalFlight = {
   passageiros: string | null
   ordem_dia: number | null
   archived_at: string
+}
+
+export type EmailProcessingStatus = {
+  tipo_operacao: string
+  last_email_subject: string | null
+  last_email_from: string | null
+  last_email_received: string | null
+  last_processed_at: string | null
 }
 
 export type Profile = {
