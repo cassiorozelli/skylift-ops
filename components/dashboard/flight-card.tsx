@@ -37,6 +37,14 @@ export function FlightCard({ flight, table, onUpdate }: Props) {
   const piloto1 = flight.piloto1?.trim() || "—"
   const piloto2 = flight.piloto2?.trim() || "—"
 
+  const hasPassengers = !!flight.passageiros?.trim()
+  const hasPilot1 = !!flight.piloto1?.trim()
+  const hasPilot2 = !!flight.piloto2?.trim()
+  const hasPilotsComplete = hasPilot1 && hasPilot2
+
+  const passengersHighlight = !hasPassengers
+  const pilotsHighlight = !hasPilotsComplete
+
   return (
     <>
       <Card className="w-full overflow-hidden rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all bg-white">
@@ -62,7 +70,11 @@ export function FlightCard({ flight, table, onUpdate }: Props) {
         </div>
 
         {/* PASSAGEIROS */}
-        <div className="bg-gray-50 mx-4 mb-3 rounded-lg p-3">
+        <div
+          className={`mx-4 mb-3 rounded-lg p-3 transition-colors ${
+            passengersHighlight ? "bg-[#FFF8CC]" : "bg-gray-50"
+          }`}
+        >
           <p className="text-sm font-semibold text-gray-700 mb-1">
             👥 Passageiros
           </p>
@@ -70,7 +82,11 @@ export function FlightCard({ flight, table, onUpdate }: Props) {
         </div>
 
         {/* TRIPULAÇÃO */}
-        <div className="bg-gray-50 mx-4 mb-4 rounded-lg p-3">
+        <div
+          className={`mx-4 mb-4 rounded-lg p-3 transition-colors ${
+            pilotsHighlight ? "bg-[#FFF8CC]" : "bg-gray-50"
+          }`}
+        >
           <p className="text-sm font-semibold text-gray-700 mb-2">
             🧑‍✈️ Tripulação
           </p>

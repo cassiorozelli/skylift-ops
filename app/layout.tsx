@@ -8,6 +8,11 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Skylift Ops | Aerorio Táxi Aéreo",
   description: "Sistema interno de operações - Aerorio Táxi Aéreo",
+  icons: {
+    icon: "/skylift-icon.png",
+    apple: "/skylift-icon.png",
+  },
+  manifest: "/manifest.json",
 }
 
 export default function RootLayout({
