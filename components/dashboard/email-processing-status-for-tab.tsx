@@ -5,17 +5,17 @@ import { supabase } from "@/lib/supabaseClient"
 import type { EmailProcessingStatus } from "@/types/database"
 import { Loader2 } from "lucide-react"
 
-function formatLastEmailReceived(timestamp: string | null): string {
+function formatTimestampBrazil(timestamp: string | null): string {
   if (!timestamp) return "—"
   try {
-    const d = new Date(timestamp)
-    const day = String(d.getDate()).padStart(2, "0")
-    const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-    const month = months[d.getMonth()]
-    const year = d.getFullYear()
-    const hour = String(d.getHours()).padStart(2, "0")
-    const minute = String(d.getMinutes()).padStart(2, "0")
-    return `${day} ${month} ${year} — ${hour}:${minute}`
+    return new Date(timestamp).toLocaleString("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
   } catch {
     return "—"
   }
@@ -59,25 +59,51 @@ export function EmailProcessingStatusForTab({ tipoOperacao }: Props) {
     )
   }
 
+  // Hide block if no record exists
+  if (!status) {
+    return null
+  }
+
   return (
     <div className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
-      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
-        Email Status
-      </p>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 mb-3">
         <span
-          className="h-2 w-2 shrink-0 rounded-full bg-green-500"
+          className="h-2.5 w-2.5 shrink-0 rounded-full bg-green-500"
           aria-hidden
         />
-        <p className="text-sm text-gray-700">
-          Last email processed: {formatLastEmailReceived(status?.last_email_received ?? null)}
+        <p className="text-sm font-semibold text-gray-900">
+          Último email processado
         </p>
       </div>
-      {status?.last_email_subject && (
-        <p className="mt-1.5 truncate text-xs text-gray-500 pl-4">
-          {status.last_email_subject}
+      <div className="space-y-1.5 text-sm text-gray-700 pl-5">
+        <p>
+          Assunto:{" "}
+          <span className="text-gray-900">
+            {status.last_email_subject || "—"}
+          </span>
         </p>
-      )}
+        <p>
+          Enviado por:{" "}
+          {status.last_email_from ? (
+            <a
+              href={`mailto:${status.last_email_from}`}
+              className="text-blue-600 hover:underline"
+            >
+              {status.last_email_from}
+            </a>
+          ) : (
+            "—"
+          )}
+        </p>
+        <p>
+          Recebido:{" "}
+          {formatTimestampBrazil(status.last_email_received)}
+        </p>
+        <p>
+          Processado:{" "}
+          {formatTimestampBrazil(status.last_processed_at)}
+        </p>
+      </div>
     </div>
   )
 }
