@@ -3,14 +3,22 @@
 import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabaseClient"
 import { FlightCard } from "./flight-card"
+import { EmailProcessingStatusForTab } from "./email-processing-status-for-tab"
 import type { Flight, FlightTable } from "@/types/database"
 import { Loader2 } from "lucide-react"
+
+const TABLE_TO_TIPO: Record<FlightTable, string> = {
+  mono_flights: "mono",
+  jato_flights: "jato",
+  helicoptero_flights: "helicoptero",
+}
 
 type Props = {
   table: FlightTable
 }
 
 export function FlightsTab({ table }: Props) {
+  const tipoOperacao = TABLE_TO_TIPO[table]
   const [flights, setFlights] = useState<Flight[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -44,24 +52,25 @@ export function FlightsTab({ table }: Props) {
     )
   }
 
-  if (flights.length === 0) {
-    return (
-      <div className="rounded-lg border border-dashed border-border bg-muted/30 p-8 sm:p-12 text-center text-muted-foreground text-sm">
-        Nenhum voo encontrado.
-      </div>
-    )
-  }
-
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
-      {flights.map((flight) => (
-        <FlightCard
-          key={flight.id}
-          flight={flight}
-          table={table}
-          onUpdate={fetchFlights}
-        />
-      ))}
+    <div className="space-y-4">
+      <EmailProcessingStatusForTab tipoOperacao={tipoOperacao} />
+      {flights.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border bg-muted/30 p-8 sm:p-12 text-center text-muted-foreground text-sm">
+          Nenhum voo encontrado.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
+          {flights.map((flight) => (
+            <FlightCard
+              key={flight.id}
+              flight={flight}
+              table={table}
+              onUpdate={fetchFlights}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
