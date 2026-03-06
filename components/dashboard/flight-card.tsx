@@ -1,9 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { EditPilotModal } from "./edit-pilot-modal"
+import { PassengerModal } from "./passenger-modal"
+import { supabase } from "@/lib/supabaseClient"
 import type { Flight, FlightTable } from "@/types/database"
 import { Pencil } from "lucide-react"
 
@@ -28,22 +30,63 @@ function formatDate(dateStr: string) {
 
 export function FlightCard({ flight, table, onUpdate }: Props) {
   const [editOpen, setEditOpen] = useState(false)
+  const [passengerOpen, setPassengerOpen] = useState(false)
+  const [flightPassengerNames, setFlightPassengerNames] = useState<string[]>([])
+
+  const fetchFlightPassengers = useCallback(async () => {
+    const { data: links, error } = await supabase
+      .from("flight_passengers")
+      .select("passenger_id")
+      .eq("flight_id", flight.id)
+      .eq("flight_table", table)
+
+    if (error || !links?.length) {
+      setFlightPassengerNames([])
+      return
+    }
+
+    const ids = links.map((l) => l.passenger_id)
+    const { data: passData } = await supabase
+      .from("passengers")
+      .select("id, name")
+      .in("id", ids)
+
+    const nameMap = new Map((passData ?? []).map((p) => [p.id, p.name]))
+    const names = ids
+      .map((id) => nameMap.get(id))
+      .filter((n): n is string => !!n)
+    setFlightPassengerNames(names)
+  }, [flight.id, table])
+
+  useEffect(() => {
+    fetchFlightPassengers()
+  }, [fetchFlightPassengers])
 
   const dataFormatada = formatDate(flight.data)
   const hora = flight.hora || "—"
   const aeronave = flight.aeronave || "—"
   const destino = flight.destino || "—"
-  const passageiros = flight.passageiros || "—"
+  const passageirosLegacy = flight.passageiros || ""
   const piloto1 = flight.piloto1?.trim() || "—"
   const piloto2 = flight.piloto2?.trim() || "—"
 
-  const hasPassengers = !!flight.passageiros?.trim()
+  const hasDbPassengers = flightPassengerNames.length > 0
+  const hasLegacyPassengers = !!passageirosLegacy?.trim()
+  const hasPassengers = hasDbPassengers || hasLegacyPassengers
   const hasPilot1 = !!flight.piloto1?.trim()
   const hasPilot2 = !!flight.piloto2?.trim()
   const hasPilotsComplete = hasPilot1 && hasPilot2
 
   const passengersHighlight = !hasPassengers
   const pilotsHighlight = !hasPilotsComplete
+
+  const displayPassengers = hasDbPassengers
+    ? flightPassengerNames
+    : passageirosLegacy
+      ? passageirosLegacy.split(/[,;]/).map((s) => s.trim()).filter(Boolean)
+      : []
+
+  const VISIBLE_COUNT = 3
 
   return (
     <>
@@ -70,16 +113,33 @@ export function FlightCard({ flight, table, onUpdate }: Props) {
         </div>
 
         {/* PASSAGEIROS */}
-        <div
-          className={`mx-4 mb-3 rounded-lg p-3 transition-colors ${
+        <button
+          type="button"
+          onClick={() => setPassengerOpen(true)}
+          className={`w-full mx-4 mb-3 rounded-lg p-3 transition-colors text-left ${
             passengersHighlight ? "bg-[#FFF8CC]" : "bg-gray-50"
-          }`}
+          } hover:bg-gray-100 border border-transparent hover:border-gray-200`}
         >
           <p className="text-sm font-semibold text-gray-700 mb-1">
             👥 Passageiros
           </p>
-          <p className="text-sm text-gray-800 break-words">{passageiros}</p>
-        </div>
+          {displayPassengers.length === 0 ? (
+            <p className="text-sm text-gray-800">Clique para adicionar</p>
+          ) : (
+            <div className="space-y-0.5">
+              {displayPassengers.slice(0, VISIBLE_COUNT).map((name, i) => (
+                <p key={i} className="text-sm text-gray-800 truncate">
+                  {name}
+                </p>
+              ))}
+              {displayPassengers.length > VISIBLE_COUNT && (
+                <p className="text-sm text-gray-600 font-medium">
+                  +{displayPassengers.length - VISIBLE_COUNT}
+                </p>
+              )}
+            </div>
+          )}
+        </button>
 
         {/* TRIPULAÇÃO */}
         <div
@@ -114,6 +174,17 @@ export function FlightCard({ flight, table, onUpdate }: Props) {
         open={editOpen}
         onOpenChange={setEditOpen}
         onSuccess={onUpdate}
+      />
+
+      <PassengerModal
+        flight={flight}
+        table={table}
+        open={passengerOpen}
+        onOpenChange={setPassengerOpen}
+        onSuccess={() => {
+          fetchFlightPassengers()
+          onUpdate()
+        }}
       />
     </>
   )
