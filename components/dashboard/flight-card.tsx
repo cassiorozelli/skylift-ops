@@ -2,12 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { EditPilotModal } from "./edit-pilot-modal"
+import { PilotModal } from "./pilot-modal"
 import { PassengerModal } from "./passenger-modal"
 import { supabase } from "@/lib/supabaseClient"
 import type { Flight, FlightTable } from "@/types/database"
-import { Pencil } from "lucide-react"
 
 type Props = {
   flight: Flight
@@ -29,9 +27,11 @@ function formatDate(dateStr: string) {
 }
 
 export function FlightCard({ flight, table, onUpdate }: Props) {
-  const [editOpen, setEditOpen] = useState(false)
+  const [pilotOpen, setPilotOpen] = useState(false)
   const [passengerOpen, setPassengerOpen] = useState(false)
   const [flightPassengerNames, setFlightPassengerNames] = useState<string[]>([])
+  const [pilot1Name, setPilot1Name] = useState<string | null>(null)
+  const [pilot2Name, setPilot2Name] = useState<string | null>(null)
 
   const fetchFlightPassengers = useCallback(async () => {
     const { data: links, error } = await supabase
@@ -58,23 +58,50 @@ export function FlightCard({ flight, table, onUpdate }: Props) {
     setFlightPassengerNames(names)
   }, [flight.id, table])
 
+  const fetchPilotNames = useCallback(async () => {
+    const ids = [flight.pilot_1_id, flight.pilot_2_id].filter(Boolean) as string[]
+    if (ids.length === 0) {
+      setPilot1Name(null)
+      setPilot2Name(null)
+      return
+    }
+    try {
+      const { data } = await supabase
+        .from("pilots")
+        .select("id, name")
+        .in("id", ids)
+      const map = new Map((data ?? []).map((p) => [p.id, p.name]))
+      setPilot1Name(flight.pilot_1_id ? map.get(flight.pilot_1_id) ?? null : null)
+      setPilot2Name(flight.pilot_2_id ? map.get(flight.pilot_2_id) ?? null : null)
+    } catch {
+      setPilot1Name(null)
+      setPilot2Name(null)
+    }
+  }, [flight.pilot_1_id, flight.pilot_2_id])
+
   useEffect(() => {
     fetchFlightPassengers()
   }, [fetchFlightPassengers])
+
+  useEffect(() => {
+    fetchPilotNames()
+  }, [fetchPilotNames])
 
   const dataFormatada = formatDate(flight.data)
   const hora = flight.hora || "—"
   const aeronave = flight.aeronave || "—"
   const destino = flight.destino || "—"
   const passageirosLegacy = flight.passageiros || ""
-  const piloto1 = flight.piloto1?.trim() || "—"
-  const piloto2 = flight.piloto2?.trim() || "—"
+  const piloto1Display =
+    (pilot1Name ?? flight.piloto1?.trim()) || "—"
+  const piloto2Display =
+    (pilot2Name ?? flight.piloto2?.trim()) || "—"
 
   const hasDbPassengers = flightPassengerNames.length > 0
   const hasLegacyPassengers = !!passageirosLegacy?.trim()
   const hasPassengers = hasDbPassengers || hasLegacyPassengers
-  const hasPilot1 = !!flight.piloto1?.trim()
-  const hasPilot2 = !!flight.piloto2?.trim()
+  const hasPilot1 = !!pilot1Name || !!flight.piloto1?.trim()
+  const hasPilot2 = !!pilot2Name || !!flight.piloto2?.trim()
   const hasPilotsComplete = hasPilot1 && hasPilot2
 
   const passengersHighlight = !hasPassengers
@@ -141,39 +168,33 @@ export function FlightCard({ flight, table, onUpdate }: Props) {
           )}
         </button>
 
-        {/* TRIPULAÇÃO */}
-        <div
-          className={`mx-4 mb-4 rounded-lg p-3 transition-colors ${
+        {/* TRIPULAÇÃO - clicável para abrir modal */}
+        <button
+          type="button"
+          onClick={() => setPilotOpen(true)}
+          className={`w-full mx-4 mb-4 rounded-lg p-3 transition-colors text-left ${
             pilotsHighlight ? "bg-[#FFF8CC]" : "bg-gray-50"
-          }`}
+          } hover:bg-gray-100 border border-transparent hover:border-gray-200`}
         >
           <p className="text-sm font-semibold text-gray-700 mb-2">
-            🧑‍✈️ Tripulação
+            👨‍✈️ Pilotos
           </p>
-          <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 text-sm text-gray-800">
-            <span className="break-words">P1: {piloto1}</span>
-            <span className="break-words">P2: {piloto2}</span>
+          <div className="space-y-0.5 text-sm text-gray-800">
+            <p className="truncate">Piloto 1: {piloto1Display}</p>
+            <p className="truncate">Piloto 2: {piloto2Display}</p>
           </div>
-        </div>
-
-        {/* BOTÃO */}
-        <div className="px-4 pb-4">
-          <Button
-            onClick={() => setEditOpen(true)}
-            className="w-full md:w-auto h-11 min-h-[44px] gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            <Pencil className="h-4 w-4 shrink-0" />
-            Editar pilotos
-          </Button>
-        </div>
+        </button>
       </Card>
 
-      <EditPilotModal
+      <PilotModal
         flight={flight}
         table={table}
-        open={editOpen}
-        onOpenChange={setEditOpen}
-        onSuccess={onUpdate}
+        open={pilotOpen}
+        onOpenChange={setPilotOpen}
+        onSuccess={() => {
+          fetchPilotNames()
+          onUpdate()
+        }}
       />
 
       <PassengerModal

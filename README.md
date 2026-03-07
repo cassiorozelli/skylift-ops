@@ -63,6 +63,12 @@ npm run dev
 
 Acesse [http://localhost:3000](http://localhost:3000).
 
+### Problema: projeto não inicia ou porta em uso
+
+1. Feche outros terminais que estejam rodando `npm run dev`
+2. Se a porta 3000 estiver ocupada, o Next.js tentará 3001, 3002… Verifique no terminal qual URL foi exibida
+3. Para limpar cache e reiniciar: `Remove-Item -Recurse .next -ErrorAction SilentlyContinue; npm run dev`
+
 ## Deploy na Vercel
 
 1. Conecte o repositório à Vercel

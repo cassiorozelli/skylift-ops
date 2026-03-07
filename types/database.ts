@@ -44,11 +44,20 @@ export type Flight = {
   passageiros: string | null
   piloto1?: string | null
   piloto2?: string | null
+  pilot_1_id?: string | null
+  pilot_2_id?: string | null
   ordem_dia: number | null
   created_at?: string
   active?: boolean
   dia_semana?: string | null
   last_seen_email?: string | null
+}
+
+export type Pilot = {
+  id: string
+  name: string
+  license_number: string | null
+  base: string | null
 }
 
 export type HistoricalFlight = {

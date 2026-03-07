@@ -160,18 +160,18 @@ export function PassengerModal({
     const existingByCpf = passengers.find((p) => p.cpf === cpf)
     const existingTemp = temporaryNewPassengers.find((p) => p.cpf === cpf)
     if (existingByCpf) {
-      setTemporarySelectedPassengers((prev) => new Set([...prev, existingByCpf.id]))
+      setTemporarySelectedPassengers((prev) => new Set([...Array.from(prev), existingByCpf.id]))
       setNewName("")
       setNewCpf("")
     } else if (existingTemp) {
-      setTemporarySelectedPassengers((prev) => new Set([...prev, existingTemp.id]))
+      setTemporarySelectedPassengers((prev) => new Set([...Array.from(prev), existingTemp.id]))
       setNewName("")
       setNewCpf("")
     } else {
       const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`
       const newP: TempPassenger = { id: tempId, name, cpf }
       setTemporaryNewPassengers((prev) => [...prev, newP])
-      setTemporarySelectedPassengers((prev) => new Set([...prev, tempId]))
+      setTemporarySelectedPassengers((prev) => new Set([...Array.from(prev), tempId]))
       setNewName("")
       setNewCpf("")
     }
@@ -254,7 +254,7 @@ export function PassengerModal({
   const handleSave = async () => {
     setSaving(true)
     try {
-      const idsToLink = [...temporarySelectedPassengers]
+      const idsToLink = Array.from(temporarySelectedPassengers)
       const newToInsert = temporaryNewPassengers.filter((p) =>
         temporarySelectedPassengers.has(p.id)
       )

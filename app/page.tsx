@@ -9,10 +9,14 @@ export default function HomePage() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        router.replace("/dashboard")
-      } else {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          router.replace("/dashboard")
+        } else {
+          router.replace("/login")
+        }
+      } catch {
         router.replace("/login")
       }
     }
