@@ -6,6 +6,7 @@ import { PilotModal } from "./pilot-modal"
 import { PassengerModal } from "./passenger-modal"
 import { supabase } from "@/lib/supabaseClient"
 import type { Flight, FlightTable } from "@/types/database"
+import { Users, Plane, Pencil } from "lucide-react"
 
 type Props = {
   flight: Flight
@@ -115,75 +116,90 @@ export function FlightCard({ flight, table, onUpdate }: Props) {
 
   const VISIBLE_COUNT = 3
 
+  const sectionBase =
+    "w-full rounded-lg p-3.5 transition-all duration-150 text-left cursor-pointer border border-transparent hover:border-gray-300"
+
+  const passengersSectionBg = passengersHighlight
+    ? "bg-[#FFF8CC] hover:bg-[#FFF4B8]"
+    : "bg-gray-50/80 hover:bg-gray-100"
+
+  const pilotsSectionBg = pilotsHighlight
+    ? "bg-[#FFF8CC] hover:bg-[#FFF4B8]"
+    : "bg-gray-50/80 hover:bg-gray-100"
+
   return (
     <>
-      <Card className="w-full overflow-hidden rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all bg-white">
-        {/* HEADER */}
-        <div className="flex justify-between items-center bg-gray-50 px-4 py-3 rounded-t-xl border-b border-gray-200">
-          <span className="text-lg font-semibold text-gray-900">
+      <Card className="w-full overflow-hidden rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow bg-white">
+        {/* HEADER: date left, time right */}
+        <div className="flex justify-between items-center px-4 pt-4 pb-1">
+          <span className="text-sm font-medium text-gray-600">
             {dataFormatada}
           </span>
-          <span className="text-lg font-semibold text-gray-900">{hora}</span>
+          <span className="text-sm font-medium text-gray-600">{hora}</span>
         </div>
 
-        {/* ROTA */}
-        <div className="px-4 py-3">
-          <h3 className="text-xl font-semibold text-gray-900">
+        {/* ROTA - main title */}
+        <div className="px-4 py-2">
+          <h3 className="text-lg font-semibold text-gray-900 leading-tight">
             {aeronave} → {destino}
           </h3>
         </div>
 
-        {/* AERONAVE */}
-        <div className="px-4 pb-3 text-sm text-gray-600">
-          Aeronave:{" "}
-          <span className="font-medium text-gray-800">{aeronave}</span>
+        {/* AERONAVE - secondary */}
+        <div className="px-4 pb-4 text-xs text-gray-500">
+          Aeronave: {aeronave}
         </div>
 
-        {/* PASSAGEIROS */}
-        <button
-          type="button"
-          onClick={() => setPassengerOpen(true)}
-          className={`w-full mx-4 mb-3 rounded-lg p-3 transition-colors text-left ${
-            passengersHighlight ? "bg-[#FFF8CC]" : "bg-gray-50"
-          } hover:bg-gray-100 border border-transparent hover:border-gray-200`}
-        >
-          <p className="text-sm font-semibold text-gray-700 mb-1">
-            👥 Passageiros
-          </p>
-          {displayPassengers.length === 0 ? (
-            <p className="text-sm text-gray-800">Clique para adicionar</p>
-          ) : (
-            <div className="space-y-0.5">
-              {displayPassengers.slice(0, VISIBLE_COUNT).map((name, i) => (
-                <p key={i} className="text-sm text-gray-800 truncate">
-                  {name}
-                </p>
-              ))}
-              {displayPassengers.length > VISIBLE_COUNT && (
-                <p className="text-sm text-gray-600 font-medium">
-                  +{displayPassengers.length - VISIBLE_COUNT}
-                </p>
-              )}
+        {/* SECTIONS */}
+        <div className="px-4 pb-4 space-y-3">
+          {/* Passageiros */}
+          <button
+            type="button"
+            onClick={() => setPassengerOpen(true)}
+            className={`group ${sectionBase} ${passengersSectionBg} flex flex-col gap-2`}
+          >
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-gray-600 shrink-0" />
+              <span className="text-sm font-medium text-gray-700">
+                Passageiros
+              </span>
+              <Pencil className="h-3 w-3 text-gray-400 ml-auto shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-          )}
-        </button>
+            {displayPassengers.length === 0 ? (
+              <p className="text-sm text-gray-500">Clique para adicionar</p>
+            ) : (
+              <div className="space-y-1 pl-6">
+                {displayPassengers.slice(0, VISIBLE_COUNT).map((name, i) => (
+                  <p key={i} className="text-sm text-gray-800 truncate">
+                    {name}
+                  </p>
+                ))}
+                {displayPassengers.length > VISIBLE_COUNT && (
+                  <p className="text-sm text-gray-500 font-medium">
+                    +{displayPassengers.length - VISIBLE_COUNT}
+                  </p>
+                )}
+              </div>
+            )}
+          </button>
 
-        {/* TRIPULAÇÃO - clicável para abrir modal */}
-        <button
-          type="button"
-          onClick={() => setPilotOpen(true)}
-          className={`w-full mx-4 mb-4 rounded-lg p-3 transition-colors text-left ${
-            pilotsHighlight ? "bg-[#FFF8CC]" : "bg-gray-50"
-          } hover:bg-gray-100 border border-transparent hover:border-gray-200`}
-        >
-          <p className="text-sm font-semibold text-gray-700 mb-2">
-            👨‍✈️ Pilotos
-          </p>
-          <div className="space-y-0.5 text-sm text-gray-800">
-            <p className="truncate">Piloto 1: {piloto1Display}</p>
-            <p className="truncate">Piloto 2: {piloto2Display}</p>
-          </div>
-        </button>
+          {/* Pilotos */}
+          <button
+            type="button"
+            onClick={() => setPilotOpen(true)}
+            className={`group ${sectionBase} ${pilotsSectionBg} flex flex-col gap-2`}
+          >
+            <div className="flex items-center gap-2">
+              <Plane className="h-4 w-4 text-gray-600 shrink-0" />
+              <span className="text-sm font-medium text-gray-700">Pilotos</span>
+              <Pencil className="h-3 w-3 text-gray-400 ml-auto shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            <div className="space-y-1 pl-6 text-sm text-gray-800">
+              <p className="truncate">Piloto 1: {piloto1Display}</p>
+              <p className="truncate">Piloto 2: {piloto2Display}</p>
+            </div>
+          </button>
+        </div>
       </Card>
 
       <PilotModal

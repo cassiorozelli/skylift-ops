@@ -34,8 +34,8 @@ Será solicitada a **senha do banco de dados** (não a senha da sua conta). Enco
 # Puxar o schema (estrutura das tabelas) do projeto vinculado
 supabase db pull
 
-# Exportar apenas os dados do remoto
-supabase db dump --linked --data-only -f supabase/dump-data.sql
+# Exportar apenas os dados do remoto (schema public)
+supabase db dump --linked --data-only -s public -f supabase/dump-data.sql
 ```
 
 ### 4. Iniciar Supabase local

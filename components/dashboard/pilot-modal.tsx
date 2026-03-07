@@ -15,6 +15,12 @@ import { supabase } from "@/lib/supabaseClient"
 import type { Flight, FlightTable, Pilot } from "@/types/database"
 import { Loader2, UserMinus } from "lucide-react"
 
+const TABLE_TO_CATEGORY: Record<FlightTable, string> = {
+  mono_flights: "mono",
+  jato_flights: "jato",
+  helicoptero_flights: "helicoptero",
+}
+
 type Props = {
   flight: Flight
   table: FlightTable
@@ -40,27 +46,45 @@ export function PilotModal({
   const [tempPilot2Id, setTempPilot2Id] = useState<string | null>(null)
 
   const { toast } = useToast()
+  const flightCategory = TABLE_TO_CATEGORY[table]
 
   const fetchPilots = useCallback(async () => {
     setLoadingPilots(true)
-    const { data, error } = await supabase
-      .from("pilots")
-      .select("id, name, license_number, base")
-      .order("name")
+    try {
+      // Sempre filtra por categoria: só pilotos desta categoria (mono/helicoptero/jato)
+      const { data: catData, error: catError } = await supabase
+        .from("pilot_categories")
+        .select("pilot_id")
+        .eq("category", flightCategory)
 
-    if (error) {
+      if (catError) {
+        console.error("pilot_categories error:", catError)
+        throw catError
+      }
+
+      const ids = Array.from(new Set((catData ?? []).map((r) => r.pilot_id)))
+      if (ids.length === 0) {
+        setPilots([])
+      } else {
+        const { data: pilotData, error: pilotError } = await supabase
+          .from("pilots")
+          .select("id, name, license_number, base")
+          .in("id", ids)
+          .order("name")
+        if (pilotError) throw pilotError
+        setPilots(pilotData ?? [])
+      }
+    } catch (error) {
       console.error(error)
       toast({
         title: "Erro",
-        description: "Não foi possível carregar os pilotos.",
+        description: "Não foi possível carregar os pilotos desta categoria.",
         variant: "destructive",
       })
       setPilots([])
-    } else {
-      setPilots(data ?? [])
     }
     setLoadingPilots(false)
-  }, [toast])
+  }, [toast, flightCategory])
 
   const initializeModal = useCallback(() => {
     setTempPilot1Id(flight.pilot_1_id ?? null)
@@ -95,20 +119,33 @@ export function PilotModal({
     else setTempPilot2Id(null)
   }
 
+  const getPilotName = async (pilotId: string | null): Promise<string | null> => {
+    if (!pilotId) return null
+    const found = pilots.find((p) => p.id === pilotId)
+    if (found) return found.name
+    const { data } = await supabase
+      .from("pilots")
+      .select("name")
+      .eq("id", pilotId)
+      .single()
+    return data?.name ?? null
+  }
+
   const handleSave = async () => {
     setSaving(true)
     try {
+      const [name1, name2] = await Promise.all([
+        getPilotName(tempPilot1Id),
+        getPilotName(tempPilot2Id),
+      ])
+
       const { error } = await supabase
         .from(table)
         .update({
           pilot_1_id: tempPilot1Id || null,
           pilot_2_id: tempPilot2Id || null,
-          piloto1: tempPilot1Id
-            ? pilots.find((p) => p.id === tempPilot1Id)?.name ?? null
-            : null,
-          piloto2: tempPilot2Id
-            ? pilots.find((p) => p.id === tempPilot2Id)?.name ?? null
-            : null,
+          piloto1: name1,
+          piloto2: name2,
         })
         .eq("id", flight.id)
 
