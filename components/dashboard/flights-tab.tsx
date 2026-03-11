@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabaseClient"
 import { FlightCard } from "./flight-card"
-import { EmailProcessingStatusForTab } from "./email-processing-status-for-tab"
+import { EmailProcessingCard } from "./email-processing-card"
 import type { Flight, FlightTable } from "@/types/database"
 import { Loader2 } from "lucide-react"
 
@@ -53,8 +53,11 @@ export function FlightsTab({ table }: Props) {
   }
 
   return (
-    <div className="space-y-4">
-      <EmailProcessingStatusForTab tipoOperacao={tipoOperacao} />
+    <div className="space-y-6">
+      {/* Email processing card (último e-mail + resumo) */}
+      <EmailProcessingCard tipoOperacao={tipoOperacao as "mono" | "jato" | "helicoptero"} />
+
+      {/* Active flights list */}
       {flights.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border bg-muted/30 p-8 sm:p-12 text-center text-muted-foreground text-sm">
           Nenhum voo encontrado.

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "@/lib/supabaseClient"
 import { Button } from "@/components/ui/button"
-import { Plane, LogOut, Users } from "lucide-react"
+import { Plane, LogOut, Users, Loader2 } from "lucide-react"
 
 export default function DashboardLayout({
   children,
@@ -15,24 +15,44 @@ export default function DashboardLayout({
   const router = useRouter()
   const [isAdmin, setIsAdmin] = useState(false)
   const [ready, setReady] = useState(false)
+  const [authChecked, setAuthChecked] = useState(false)
+  const [hasUser, setHasUser] = useState<boolean | null>(null)
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser()
+        if (error) {
+          console.error("Auth error:", error)
+          setHasUser(false)
+          router.push("/login")
+          setAuthChecked(true)
+          return
+        }
+        if (!user) {
+          setHasUser(false)
+          router.push("/login")
+          setAuthChecked(true)
+          return
+        }
+
+        setHasUser(true)
+        const { data } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .maybeSingle()
+
+        const role = (data as { role?: string } | null)?.role
+        setIsAdmin(role === "admin")
+      } catch (err) {
+        console.error(err)
+        setHasUser(false)
         router.push("/login")
-        return
+      } finally {
+        setAuthChecked(true)
+        setReady(true)
       }
-
-      const { data } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle()
-
-      const role = (data as { role?: string } | null)?.role
-      setIsAdmin(role === "admin")
-      setReady(true)
     }
 
     checkAuth()
@@ -42,6 +62,19 @@ export default function DashboardLayout({
     await supabase.auth.signOut()
     router.push("/login")
     router.refresh()
+  }
+
+  if (!authChecked || hasUser === false) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#ffffff]">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">
+            {hasUser === false ? "Redirecionando para login..." : "Carregando..."}
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (

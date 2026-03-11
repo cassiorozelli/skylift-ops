@@ -61,8 +61,9 @@ export type Pilot = {
 }
 
 export type HistoricalFlight = {
+  id?: string
+  tipo_operacao?: "mono" | "jato" | "helicoptero"
   flight_id: string
-  tipo_detectado: string
   data: string
   dia_semana: string | null
   hora: string | null
@@ -70,8 +71,8 @@ export type HistoricalFlight = {
   destino: string | null
   passageiros: string | null
   ordem_dia: number | null
+  status?: "archived" | "cancelled" | null
   archived_at: string
-  status?: "removed_from_email" | "cancelled" | null
 }
 
 export type EmailProcessingStatus = {
@@ -80,6 +81,15 @@ export type EmailProcessingStatus = {
   last_email_from: string | null
   last_email_received: string | null
   last_processed_at: string | null
+  last_added?: number | null
+  last_updated?: number | null
+  last_cancelled?: number | null
+}
+
+export type ProcessingSummary = {
+  added: number
+  updated: number
+  cancelled: number
 }
 
 export type Profile = {

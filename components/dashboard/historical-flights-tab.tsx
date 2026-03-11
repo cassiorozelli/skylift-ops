@@ -46,7 +46,7 @@ export function HistoricalFlightsTab() {
 
   return (
     <div className="space-y-6">
-      {/* MONTH & YEAR FILTERS */}
+      {/* FILTROS DE MÊS E ANO */}
       <div className="flex flex-wrap gap-4 items-end">
         <div className="space-y-2">
           <label
@@ -90,7 +90,7 @@ export function HistoricalFlightsTab() {
         </div>
       </div>
 
-      {/* AIRCRAFT TYPE SUB-TABS - same structure as Active Flights */}
+      {/* SUB-ABAS: Monomotores | Jatos | Helicópteros */}
       <Tabs defaultValue="mono" className="space-y-4">
         <TabsList className="w-full grid grid-cols-3 h-auto p-1 gap-1 bg-muted/50 rounded-lg">
           {TIPO_TABS.map((tab) => (
@@ -105,8 +105,8 @@ export function HistoricalFlightsTab() {
         </TabsList>
         {TIPO_TABS.map((tab) => (
           <TabsContent key={tab.value} value={tab.value} className="mt-0">
-            <HistoricalFlightsContentWrapper
-              tipoDetectado={tab.value}
+            <HistoricalFlightsContent
+              tipoOperacao={tab.value}
               monthFilter={monthFilter}
               yearFilter={yearFilter}
             />
@@ -117,25 +117,26 @@ export function HistoricalFlightsTab() {
   )
 }
 
-function HistoricalFlightsContentWrapper({
-  tipoDetectado,
+function HistoricalFlightsContent({
+  tipoOperacao,
   monthFilter,
   yearFilter,
 }: {
-  tipoDetectado: TipoDetectado
+  tipoOperacao: TipoDetectado
   monthFilter: string
   yearFilter: string
 }) {
   const [flights, setFlights] = useState<HistoricalFlight[]>([])
   const [loading, setLoading] = useState(true)
 
-  const fetchFlights = useCallback(async () => {
+  const loadFlights = useCallback(async () => {
     setLoading(true)
     let query = supabase
       .from("flights_history")
       .select("*")
-      .eq("tipo_detectado", tipoDetectado)
+      .eq("tipo_operacao", tipoOperacao)
       .order("archived_at", { ascending: false })
+      .limit(200)
 
     if (monthFilter || yearFilter) {
       if (yearFilter) {
@@ -152,12 +153,12 @@ function HistoricalFlightsContentWrapper({
                 const nextYear = month === 12 ? year + 1 : year
                 return `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`
               })()
-            : `${year}-12-31T23:59:59`
+            : `${year}-12-31`
         query = query.gte("data", startDate)
         if (month > 0) {
           query = query.lt("data", endDate)
         } else {
-          query = query.lte("data", endDate.split("T")[0])
+          query = query.lte("data", endDate)
         }
       } else if (monthFilter) {
         const monthStr = String(parseInt(monthFilter, 10)).padStart(2, "0")
@@ -168,22 +169,26 @@ function HistoricalFlightsContentWrapper({
     const { data, error } = await query
 
     if (error) {
-      console.error(error)
+      console.error("Erro carregando histórico:", error)
       setFlights([])
     } else {
-      setFlights(data ?? [])
+      console.log("Historical flights loaded:", data)
+      setFlights(data || [])
     }
     setLoading(false)
-  }, [tipoDetectado, monthFilter, yearFilter])
+  }, [tipoOperacao, monthFilter, yearFilter])
 
   useEffect(() => {
-    fetchFlights()
-  }, [fetchFlights])
+    loadFlights()
+  }, [loadFlights])
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16 sm:py-20">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <span className="ml-2 text-sm text-muted-foreground">
+          Carregando voos históricos...
+        </span>
       </div>
     )
   }
@@ -191,7 +196,7 @@ function HistoricalFlightsContentWrapper({
   if (flights.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50/50 p-8 sm:p-12 text-center text-gray-600 text-sm">
-        Nenhum voo cancelado encontrado.
+        Nenhum voo histórico encontrado.
       </div>
     )
   }
@@ -200,7 +205,7 @@ function HistoricalFlightsContentWrapper({
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
       {flights.map((flight) => (
         <HistoricalFlightCard
-          key={`${flight.flight_id}-${flight.archived_at}`}
+          key={flight.id ?? `${flight.flight_id}-${flight.archived_at}`}
           flight={flight}
         />
       ))}
