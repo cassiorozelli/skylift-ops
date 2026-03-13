@@ -2,12 +2,15 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { DM_Sans } from "next/font/google"
 import { supabase } from "@/lib/supabaseClient"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
-import { Plane } from "lucide-react"
+import { Plane, Loader2 } from "lucide-react"
+
+const dmSans = DM_Sans({ subsets: ["latin"], weight: ["400", "500", "600", "700"] })
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -46,24 +49,37 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#ffffff] px-4 py-8 sm:px-6">
-      <div className="w-full max-w-[400px] space-y-10">
-        <div className="text-center space-y-3">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary/10 text-primary">
-            <Plane className="w-7 h-7" />
+    <div className={`min-h-screen flex items-center justify-center relative overflow-hidden ${dmSans.className}`}>
+      {/* Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-blue-50" />
+      <div
+        className="absolute inset-0 opacity-[0.4]"
+        style={{
+          backgroundImage: `radial-gradient(circle at 1px 1px, rgb(148 163 184 / 0.15) 1px, transparent 0)`,
+          backgroundSize: "32px 32px",
+        }}
+      />
+
+      {/* Content */}
+      <div className="relative w-full max-w-md px-6">
+        {/* Logo e título */}
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[hsl(221,83%,27%)] text-white shadow-lg shadow-slate-300/30 mb-6">
+            <Plane className="w-8 h-8" strokeWidth={2} />
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
             Skylift Ops
           </h1>
-          <p className="text-muted-foreground text-sm">
-            Aerorio Táxi Aéreo — Sistema de Operações
+          <p className="text-slate-500 text-sm mt-1">
+            Aerorio Táxi Aéreo · Sistema de Operações
           </p>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-6 sm:p-8 shadow-sm">
-          <form onSubmit={handleLogin} className="space-y-5">
+        {/* Card do formulário */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xl shadow-slate-200/50 p-8">
+          <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-foreground font-medium">
+              <Label htmlFor="email" className="text-slate-700 font-medium text-sm">
                 E-mail
               </Label>
               <Input
@@ -74,10 +90,11 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
+                className="h-11 border-slate-200 focus:border-primary focus:ring-primary/20"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-foreground font-medium">
+              <Label htmlFor="password" className="text-slate-700 font-medium text-sm">
                 Senha
               </Label>
               <Input
@@ -88,24 +105,28 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
+                className="h-11 border-slate-200 focus:border-primary focus:ring-primary/20"
               />
             </div>
             <Button
               type="submit"
-              className="w-full h-11 sm:h-12 text-base font-medium"
+              className="w-full h-12 text-base font-semibold mt-2"
               disabled={loading}
             >
-              {loading ? "Entrando..." : "Entrar"}
+              {loading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  Entrando...
+                </>
+              ) : (
+                "Entrar"
+              )}
             </Button>
           </form>
-
-          <p className="mt-5 text-center text-sm text-muted-foreground">
-            Use suas credenciais do sistema para acessar.
-          </p>
         </div>
 
-        <p className="text-center text-xs text-muted-foreground">
-          Skylift Ops — Aerorio Táxi Aéreo
+        <p className="text-center text-xs text-slate-400 mt-8">
+          Use suas credenciais do sistema para acessar.
         </p>
       </div>
     </div>

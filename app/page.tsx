@@ -12,7 +12,7 @@ export default function HomePage() {
       try {
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
-          router.replace("/dashboard")
+          router.replace("/flights/active/mono")
         } else {
           router.replace("/login")
         }

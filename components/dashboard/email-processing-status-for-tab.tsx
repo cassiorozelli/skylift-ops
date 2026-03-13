@@ -77,13 +77,13 @@ export function EmailProcessingStatusForTab({ tipoOperacao }: Props) {
       </div>
       <div className="space-y-1.5 text-sm text-gray-700 pl-5">
         <p>
-          Assunto:{" "}
+          <span className="font-medium text-gray-600">Assunto:</span>{" "}
           <span className="text-gray-900">
             {status.last_email_subject || "—"}
           </span>
         </p>
         <p>
-          Enviado por:{" "}
+          <span className="font-medium text-gray-600">Enviado por:</span>{" "}
           {status.last_email_from ? (
             <a
               href={`mailto:${status.last_email_from}`}
@@ -96,11 +96,11 @@ export function EmailProcessingStatusForTab({ tipoOperacao }: Props) {
           )}
         </p>
         <p>
-          Recebido:{" "}
+          <span className="font-medium text-gray-600">Recebido:</span>{" "}
           {formatTimestampBrazil(status.last_email_received)}
         </p>
         <p>
-          Processado:{" "}
+          <span className="font-medium text-gray-600">Processado:</span>{" "}
           {formatTimestampBrazil(status.last_processed_at)}
         </p>
       </div>

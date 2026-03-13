@@ -1,11 +1,11 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
+import Link from "next/link"
 import { supabase } from "@/lib/supabaseClient"
 import { FlightCard } from "./flight-card"
-import { EmailProcessingCard } from "./email-processing-card"
 import type { Flight, FlightTable } from "@/types/database"
-import { Loader2 } from "lucide-react"
+import { Loader2, Calendar, Mail } from "lucide-react"
 
 const TABLE_TO_TIPO: Record<FlightTable, string> = {
   mono_flights: "mono",
@@ -54,8 +54,22 @@ export function FlightsTab({ table }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Email processing card (último e-mail + resumo) */}
-      <EmailProcessingCard tipoOperacao={tipoOperacao as "mono" | "jato" | "helicoptero"} />
+      <div className="flex justify-end gap-2">
+        <Link
+          href="/dashboard/email-status"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          <Mail className="h-4 w-4" />
+          E-mail Status
+        </Link>
+        <Link
+          href={`/dashboard/calendario/${tipoOperacao}`}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          <Calendar className="h-4 w-4" />
+          Calendário
+        </Link>
+      </div>
 
       {/* Active flights list */}
       {flights.length === 0 ? (

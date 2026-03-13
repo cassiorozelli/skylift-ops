@@ -22,6 +22,15 @@ export type Database = {
       email_processing_status: {
         Row: EmailProcessingStatus
       }
+      flight_durations: {
+        Row: {
+          id: string
+          aeronave: string
+          origem: string
+          destino: string
+          tempo_medio_minutos: number
+        }
+      }
       profiles: {
         Row: Profile
         Insert: Omit<Profile, "created_at">

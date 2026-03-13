@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabaseClient"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { HistoricalFlightCard } from "./historical-flight-card"
 import type { HistoricalFlight, TipoDetectado } from "@/types/database"
 import { Loader2 } from "lucide-react"
@@ -23,11 +22,24 @@ const MONTHS = [
   { value: "12", label: "Dezembro" },
 ]
 
-const TIPO_TABS: { value: TipoDetectado; label: string }[] = [
-  { value: "mono", label: "Monomotores" },
-  { value: "jato", label: "Jatos" },
-  { value: "helicoptero", label: "Helicópteros" },
-]
+function getMonthRange(
+  year: number,
+  month: number
+): { startDate: string; endDate: string } | { startDate: null; endDate: null } {
+  if (month > 0) {
+    const start = new Date(year, month - 1, 1)
+    const end = new Date(year, month, 1)
+    const startDate = start.toISOString().slice(0, 10)
+    const endDate = end.toISOString().slice(0, 10)
+    return { startDate, endDate }
+  }
+  if (year > 0) {
+    const startDate = `${year}-01-01`
+    const endDate = `${year + 1}-01-01`
+    return { startDate, endDate }
+  }
+  return { startDate: null, endDate: null }
+}
 
 function getYears(): { value: string; label: string }[] {
   const currentYear = new Date().getFullYear()
@@ -40,7 +52,11 @@ function getYears(): { value: string; label: string }[] {
 
 const YEARS = getYears()
 
-export function HistoricalFlightsTab() {
+type HistoricalFlightsTabProps = {
+  categoria?: TipoDetectado
+}
+
+export function HistoricalFlightsTab({ categoria = "mono" }: HistoricalFlightsTabProps) {
   const [monthFilter, setMonthFilter] = useState("")
   const [yearFilter, setYearFilter] = useState("")
 
@@ -90,29 +106,11 @@ export function HistoricalFlightsTab() {
         </div>
       </div>
 
-      {/* SUB-ABAS: Monomotores | Jatos | Helicópteros */}
-      <Tabs defaultValue="mono" className="space-y-4">
-        <TabsList className="w-full grid grid-cols-3 h-auto p-1 gap-1 bg-muted/50 rounded-lg">
-          {TIPO_TABS.map((tab) => (
-            <TabsTrigger
-              key={tab.value}
-              value={tab.value}
-              className="py-3 px-4 text-sm font-medium data-[state=active]:bg-[#ffffff] data-[state=active]:shadow-sm rounded-md"
-            >
-              {tab.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-        {TIPO_TABS.map((tab) => (
-          <TabsContent key={tab.value} value={tab.value} className="mt-0">
-            <HistoricalFlightsContent
-              tipoOperacao={tab.value}
-              monthFilter={monthFilter}
-              yearFilter={yearFilter}
-            />
-          </TabsContent>
-        ))}
-      </Tabs>
+      <HistoricalFlightsContent
+        tipoOperacao={categoria}
+        monthFilter={monthFilter}
+        yearFilter={yearFilter}
+      />
     </div>
   )
 }
@@ -134,35 +132,18 @@ function HistoricalFlightsContent({
     let query = supabase
       .from("flights_history")
       .select("*")
-      .eq("tipo_operacao", tipoOperacao)
+      .eq("tipo_detectado", tipoOperacao)
       .order("archived_at", { ascending: false })
       .limit(200)
 
     if (monthFilter || yearFilter) {
-      if (yearFilter) {
-        const year = parseInt(yearFilter, 10)
-        const month = monthFilter ? parseInt(monthFilter, 10) : 0
-        const startDate =
-          month > 0
-            ? `${year}-${String(month).padStart(2, "0")}-01`
-            : `${year}-01-01`
-        const endDate =
-          month > 0
-            ? (() => {
-                const nextMonth = month === 12 ? 1 : month + 1
-                const nextYear = month === 12 ? year + 1 : year
-                return `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`
-              })()
-            : `${year}-12-31`
-        query = query.gte("data", startDate)
-        if (month > 0) {
-          query = query.lt("data", endDate)
-        } else {
-          query = query.lte("data", endDate)
-        }
-      } else if (monthFilter) {
-        const monthStr = String(parseInt(monthFilter, 10)).padStart(2, "0")
-        query = query.like("data", `%-${monthStr}-%`)
+      const year = yearFilter ? parseInt(yearFilter, 10) : new Date().getFullYear()
+      const month = monthFilter ? parseInt(monthFilter, 10) : 0
+
+      const { startDate, endDate } = getMonthRange(year, month)
+
+      if (startDate && endDate) {
+        query = query.gte("data", startDate).lt("data", endDate)
       }
     }
 
@@ -172,7 +153,6 @@ function HistoricalFlightsContent({
       console.error("Erro carregando histórico:", error)
       setFlights([])
     } else {
-      console.log("Historical flights loaded:", data)
       setFlights(data || [])
     }
     setLoading(false)
