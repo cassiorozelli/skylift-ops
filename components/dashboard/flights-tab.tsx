@@ -5,7 +5,7 @@ import Link from "next/link"
 import { supabase } from "@/lib/supabaseClient"
 import { FlightCard } from "./flight-card"
 import type { Flight, FlightTable } from "@/types/database"
-import { Loader2, Calendar, Mail } from "lucide-react"
+import { Loader2, Calendar, Mail, LayoutGrid } from "lucide-react"
 
 const TABLE_TO_TIPO: Record<FlightTable, string> = {
   mono_flights: "mono",
@@ -68,6 +68,13 @@ export function FlightsTab({ table }: Props) {
         >
           <Calendar className="h-4 w-4" />
           Calendário
+        </Link>
+        <Link
+          href="/dashboard/dispatch"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          <LayoutGrid className="h-4 w-4" />
+          Dispatch
         </Link>
       </div>
 

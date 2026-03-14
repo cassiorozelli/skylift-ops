@@ -1,6 +1,8 @@
 "use client"
 
 import { useParams } from "next/navigation"
+import Link from "next/link"
+import { ArrowLeft } from "lucide-react"
 import { FlightCalendarView } from "@/components/calendar/FlightCalendarView"
 import { Loader2 } from "lucide-react"
 
@@ -25,6 +27,15 @@ export default function CalendarPage() {
   }
 
   return (
-    <FlightCalendarView categoria={categoria as "mono" | "jato" | "helicoptero"} />
+    <div className="space-y-6">
+      <Link
+        href="/dashboard"
+        className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to dashboard
+      </Link>
+      <FlightCalendarView categoria={categoria as "mono" | "jato" | "helicoptero"} />
+    </div>
   )
 }

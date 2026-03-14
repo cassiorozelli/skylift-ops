@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabaseClient"
 import type { EmailProcessingStatus } from "@/types/database"
-import { Loader2 } from "lucide-react"
+import { Loader2, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
 function formatTimestampBrazil(timestamp: string | null): string {
@@ -62,17 +62,16 @@ export default function EmailStatusPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
-          Último e-mail processado
-        </h1>
-        <Link
-          href="/dashboard"
-          className="text-sm text-gray-600 hover:text-gray-900"
-        >
-          ← Voltar ao dashboard
-        </Link>
-      </div>
+      <Link
+        href="/dashboard"
+        className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to dashboard
+      </Link>
+      <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
+        Último e-mail processado
+      </h1>
 
       {statuses.length === 0 ? (
         <div className="rounded-lg border border-gray-200 bg-white px-4 py-8 text-center">
