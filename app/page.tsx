@@ -10,7 +10,14 @@ export default function HomePage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser()
+        const { data: { user }, error } = await supabase.auth.getUser()
+        if (error) {
+          if (error.message?.includes("Refresh Token") || error.message?.includes("refresh_token")) {
+            await supabase.auth.signOut()
+          }
+          router.replace("/login")
+          return
+        }
         if (user) {
           router.replace("/flights/active/mono")
         } else {

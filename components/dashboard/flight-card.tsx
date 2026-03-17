@@ -95,6 +95,14 @@ export function FlightCard({ flight, table, onUpdate }: Props) {
   const fetchFlightDuration = useCallback(async () => {
     if (!canShowDuration) return
 
+    // Prioridade: tempo_voo do voo específico > flight_durations
+    const manualDuration = flight.tempo_voo
+    if (manualDuration != null && manualDuration > 0) {
+      setFlightDuration(manualDuration)
+      setDurationInput(minutesToHHMM(manualDuration))
+      return
+    }
+
     const { data } = await supabase
       .from("flight_durations")
       .select("tempo_medio_minutos")
@@ -110,7 +118,7 @@ export function FlightCard({ flight, table, onUpdate }: Props) {
       setFlightDuration(null)
       setDurationInput("")
     }
-  }, [aeronaveRaw, origemRaw, destinoRaw, canShowDuration])
+  }, [aeronaveRaw, origemRaw, destinoRaw, canShowDuration, flight.tempo_voo])
 
   /* =========================
      SALVAR TEMPO
@@ -122,21 +130,18 @@ export function FlightCard({ flight, table, onUpdate }: Props) {
   
     if (!minutes || minutes <= 0) return
   
-    const aeronaveRaw = flight.aeronave
-    const origemRaw = (flight as any).origem
-    const destinoRaw = (flight as any).destino_final
-  
     try {
-  
-      // 1️⃣ atualizar o voo específico
-      await supabase
+      const { error: updateError } = await supabase
         .from(table)
-        .update({
-          tempo_voo: minutes
-        })
+        .update({ tempo_voo: minutes })
         .eq("id", flight.id)
-  
-      // 2️⃣ atualizar histórico
+
+      if (updateError) {
+        console.error("Erro ao atualizar tempo_voo no voo:", updateError)
+        return
+      }
+
+      // 2️⃣ atualizar flight_durations (usar origem/destino corretos da rota parseada)
       await supabase
         .from("flight_durations")
         .upsert(
@@ -144,11 +149,9 @@ export function FlightCard({ flight, table, onUpdate }: Props) {
             aeronave: aeronaveRaw,
             origem: origemRaw,
             destino: destinoRaw,
-            tempo_minutos: minutes
+            tempo_medio_minutos: minutes,
           },
-          {
-            onConflict: "aeronave,origem,destino"
-          }
+          { onConflict: "aeronave,origem,destino" }
         )
   
       setFlightDuration(minutes)

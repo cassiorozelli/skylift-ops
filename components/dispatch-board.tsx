@@ -11,17 +11,28 @@ import { Loader2, Calendar, ChevronLeft, ChevronRight } from "lucide-react"
 const PIXELS_PER_MINUTE = 2
 const MIN_FLIGHT_WIDTH = 80
 const NO_DURATION_OFFSET = 90
-const MARGIN_BEFORE_MINUTES = 30
-const MARGIN_AFTER_MINUTES = 180
+const DEFAULT_START_HOUR = 6
+const DEFAULT_END_HOUR = 22
+const FALLBACK_DURATION = 10 // minutes when duration is missing/invalid
+const MIN_DURATION_FALLBACK = FALLBACK_DURATION
 
-type FlightWithRoute = Flight & { origem?: string | null }
+type FlightWithRoute = Flight & {
+  origem?: string | null
+  duration?: number | null
+  duracao?: number | null
+  flight_duration?: number | null
+}
 
 function timeToMinutes(time: string | null): number {
   if (!time) return 0
-  const parts = time.trim().split(/[:\s]/).map(Number)
-  const h = parts[0] ?? 0
-  const m = parts[1] ?? 0
-  return h * 60 + m
+  const [h, m] = (time.trim().split(":").map(Number) as [number, number])
+  return (h ?? 0) * 60 + (m ?? 0)
+}
+
+function getHour(time: string | null): number {
+  if (!time) return DEFAULT_START_HOUR
+  const h = Number(time.split(":")[0])
+  return Number.isFinite(h) ? h : DEFAULT_START_HOUR
 }
 
 function getRouteDisplay(flight: FlightWithRoute): string {
@@ -47,6 +58,16 @@ function toDateKey(date: Date) {
   const m = String(date.getMonth() + 1).padStart(2, "0")
   const d = String(date.getDate()).padStart(2, "0")
   return `${y}-${m}-${d}`
+}
+
+/** Duration from flight fields (duration, duracao, tempo_voo, flight_duration), then lookup, then FALLBACK_DURATION. */
+function getSafeDurationMinutes(flight: FlightWithRoute, lookupMinutes: number): number {
+  const fromFlight = Number(
+    flight.duration ?? flight.duracao ?? flight.tempo_voo ?? (flight as FlightWithRoute).flight_duration ?? 0
+  )
+  if (fromFlight > 0 && Number.isFinite(fromFlight)) return fromFlight
+  if (lookupMinutes > 0 && Number.isFinite(lookupMinutes)) return lookupMinutes
+  return FALLBACK_DURATION
 }
 
 export function DispatchBoard() {
@@ -145,36 +166,39 @@ export function DispatchBoard() {
   }
 
   const timelineRange = useMemo(() => {
-    const times = flights
-      .map((f) => f.hora)
-      .filter(Boolean)
-      .map(timeToMinutes)
-    const hasFlights = times.length > 0
-    let startMinutes: number
-    let endMinutes: number
-    if (hasFlights) {
-      const firstFlight = Math.min(...times)
-      const lastFlight = Math.max(...times)
-      startMinutes = firstFlight - MARGIN_BEFORE_MINUTES
-      endMinutes = lastFlight + MARGIN_AFTER_MINUTES
-    } else {
-      startMinutes = 6 * 60
-      endMinutes = 22 * 60
+    const getLookup = (f: Flight): number => {
+      const a = (f.aeronave ?? "").trim()
+      const { origem, destino } = getOrigemDestino(f as FlightWithRoute)
+      return durations.get(`${a}|${origem}|${destino}`) ?? 0
     }
-    startMinutes = Math.floor(startMinutes / 60) * 60
-    endMinutes = Math.ceil(endMinutes / 60) * 60
-    const startHour = Math.floor(startMinutes / 60)
-    const endHour = Math.ceil(endMinutes / 60)
-    const totalMinutes = endMinutes - startMinutes
+    let minFlightHour = DEFAULT_START_HOUR
+    let maxFlightHour = DEFAULT_END_HOUR
+    if (flights.length > 0) {
+      const startMinutes = flights.map((f) => timeToMinutes(f.hora))
+      const endMinutes = flights.map((f) => {
+        const start = timeToMinutes(f.hora)
+        const safeDur = getSafeDurationMinutes(f as FlightWithRoute, getLookup(f))
+        return start + safeDur
+      })
+      const minM = Math.min(...startMinutes)
+      const maxM = Math.max(...endMinutes)
+      minFlightHour = Math.floor(minM / 60)
+      maxFlightHour = Math.ceil(maxM / 60)
+    }
+    const startHour = Math.min(DEFAULT_START_HOUR, minFlightHour)
+    const endHour = Math.max(DEFAULT_END_HOUR, maxFlightHour)
+    const totalMinutes = (endHour - startHour) * 60
+    const startMinutes = startHour * 60
+    const endMinutes = endHour * 60
     const timelineWidth = totalMinutes * PIXELS_PER_MINUTE
     const hours = Array.from(
       { length: endHour - startHour + 1 },
       (_, i) => startHour + i
     )
     return { startMinutes, endMinutes, startHour, endHour, totalMinutes, timelineWidth, hours }
-  }, [flights])
+  }, [flights, durations])
 
-  const { startMinutes, endMinutes, timelineWidth, hours } = timelineRange
+  const { startMinutes, endMinutes, startHour, endHour, totalMinutes, timelineWidth, hours } = timelineRange
 
   const nowIndicator = useMemo(() => {
     const isToday = toDateKey(selectedDate) === toDateKey(new Date())
@@ -182,9 +206,10 @@ export function DispatchBoard() {
     const now = new Date()
     const nowMinutes = now.getHours() * 60 + now.getMinutes()
     if (nowMinutes < startMinutes || nowMinutes > endMinutes) return null
-    const nowLeft = (nowMinutes - startMinutes) * PIXELS_PER_MINUTE
-    return { nowLeft }
-  }, [selectedDate, startMinutes, endMinutes])
+    const raw = ((nowMinutes - startMinutes) / totalMinutes) * 100
+    const nowLeftPct = Math.max(0, Math.min(100, raw))
+    return { nowLeftPct }
+  }, [selectedDate, startMinutes, endMinutes, totalMinutes])
 
   return (
     <div>
@@ -241,17 +266,19 @@ export function DispatchBoard() {
             Aeronave
           </div>
           <div className="relative" style={{ width: timelineWidth }}>
-            {hours.map((h) => (
-              <div
-                key={h}
-                className="absolute top-0 bottom-0 border-l border-gray-200 px-1 pt-2 text-xs text-gray-500"
-                style={{
-                  left: (h * 60 - startMinutes) * PIXELS_PER_MINUTE,
-                }}
-              >
-                {String(h).padStart(2, "0")}:00
-              </div>
-            ))}
+            {hours.map((h) => {
+              const span = endHour - startHour
+              const pct = span <= 0 ? 0 : Math.max(0, Math.min(100, ((h - startHour) / span) * 100))
+              return (
+                <div
+                  key={h}
+                  className="absolute top-0 bottom-0 border-l border-gray-200 px-1 pt-2 text-xs text-gray-500"
+                  style={{ left: `${pct}%` }}
+                >
+                  {String(h).padStart(2, "0")}:00
+                </div>
+              )
+            })}
           </div>
         </div>
 
@@ -276,15 +303,28 @@ export function DispatchBoard() {
               ) : (
                 <>
                   {(() => {
-                    const withDuration = list.filter((f) => getDurationMinutes(f) > 0)
-                    const withoutDuration = list
-                      .filter((f) => getDurationMinutes(f) === 0)
-                      .sort((a, b) => timeToMinutes(a.hora) - timeToMinutes(b.hora))
-                    const baseLeftNoDuration =
-                      withoutDuration.length > 0
-                        ? (timeToMinutes(withoutDuration[0].hora) - startMinutes) *
-                          PIXELS_PER_MINUTE
-                        : 0
+                    const sortedList = [...list].sort(
+                      (a, b) => timeToMinutes(a.hora) - timeToMinutes(b.hora)
+                    )
+                    const hasRealDuration = (f: FlightWithRoute) => {
+                      const lookupMinutes = getDurationMinutes(f)
+                      const rawDuration =
+                        f.duration ??
+                        f.duracao ??
+                        f.tempo_voo ??
+                        f.flight_duration ??
+                        lookupMinutes
+                      return (
+                        Number.isFinite(Number(rawDuration)) &&
+                        Number(rawDuration) > 0
+                      )
+                    }
+                    const withDuration = sortedList.filter((f) =>
+                      hasRealDuration(f)
+                    )
+                    const withoutDuration = sortedList.filter(
+                      (f) => !hasRealDuration(f)
+                    )
                     const isToday =
                       toDateKey(selectedDate) === toDateKey(new Date())
                     const now = new Date()
@@ -294,31 +334,36 @@ export function DispatchBoard() {
                     return (
                       <>
                         {withDuration.map((flight) => {
-                          const flightMinutes = timeToMinutes(flight.hora)
-                          const minutesFromStart = flightMinutes - startMinutes
-                          if (minutesFromStart < 0) return null
+                          const start = timeToMinutes(flight.hora)
+                          const durationMins = getSafeDurationMinutes(flight, getDurationMinutes(flight))
+                          const end = start + durationMins
 
-                          const durationMins = getDurationMinutes(flight)
-                          const widthPx = durationMins * PIXELS_PER_MINUTE
-                          const left = minutesFromStart * PIXELS_PER_MINUTE
-                          if (
-                            left + widthPx > timelineWidth &&
-                            left > timelineWidth
-                          )
-                            return null
+                          const clampedStart = Math.max(start, startMinutes)
+                          const clampedEnd = Math.min(end, endMinutes)
+                          let left = (clampedStart - startHour * 60) / totalMinutes
+                          let width = (clampedEnd - clampedStart) / totalMinutes
+                          if (clampedEnd <= clampedStart) {
+                            left = start < startMinutes ? 0 : Math.max(0, 1 - 1 / 100)
+                            width = 1 / 100
+                          } else {
+                            width = Math.max(width, 1 / 100)
+                          }
+                          const leftPct = Math.max(0, Math.min(1, left)) * 100
+                          const widthPct = Math.max(0, Math.min(1 - leftPct / 100, width)) * 100
+                          const finalWidthPct = Math.max(widthPct, 1)
 
                           const colors = getAircraftColor(flight.aeronave)
                           const rota = getRouteDisplay(flight)
                           const hora = flight.hora ?? "—"
 
-                          const start = flightMinutes
-                          const end = start + durationMins
                           const inFlight =
                             isToday &&
                             nowMinutes >= start &&
                             nowMinutes <= end
                           const rawProgress =
-                            ((nowMinutes - start) / durationMins) * 100
+                            durationMins > 0
+                              ? ((nowMinutes - start) / durationMins) * 100
+                              : 0
                           const progress = Math.max(
                             0,
                             Math.min(100, rawProgress)
@@ -329,8 +374,8 @@ export function DispatchBoard() {
                               key={flight.id}
                               className={`absolute top-2 bottom-2 rounded border-l-4 px-2 py-1.5 shadow-sm ${colors.border} ${colors.bg}${inFlight ? " ring-2 ring-green-500" : ""}`}
                               style={{
-                                left: `${left}px`,
-                                width: `${widthPx}px`,
+                                left: `${leftPct}%`,
+                                width: `${finalWidthPct}%`,
                                 minWidth: MIN_FLIGHT_WIDTH,
                               }}
                             >
@@ -356,10 +401,27 @@ export function DispatchBoard() {
                             </div>
                           )
                         })}
-                        {withoutDuration.map((flight, index) => {
-                          const baseLeft = baseLeftNoDuration
-                          const left = baseLeft + index * NO_DURATION_OFFSET
-                          if (left + MIN_FLIGHT_WIDTH > timelineWidth) return null
+                        {withoutDuration.map((flight) => {
+                          const start = timeToMinutes(flight.hora)
+                          const durationMins = getSafeDurationMinutes(
+                            flight,
+                            getDurationMinutes(flight)
+                          )
+                          const end = start + durationMins
+                          const clampedStart = Math.max(start, startMinutes)
+                          const clampedEnd = Math.min(end, endMinutes)
+                          let left = (clampedStart - startHour * 60) / totalMinutes
+                          let width = (clampedEnd - clampedStart) / totalMinutes
+                          if (clampedEnd <= clampedStart) {
+                            left = start < startMinutes ? 0 : Math.max(0, 1 - 1 / 100)
+                            width = 1 / 100
+                          } else {
+                            width = Math.max(width, 1 / 100)
+                          }
+                          const leftPct = Math.max(0, Math.min(1, left)) * 100
+                          const widthPct =
+                            Math.max(0, Math.min(1 - leftPct / 100, width)) * 100
+                          const finalWidthPct = Math.max(widthPct, 1)
 
                           const colors = getAircraftColor(flight.aeronave)
                           const rota = getRouteDisplay(flight)
@@ -370,8 +432,9 @@ export function DispatchBoard() {
                               key={flight.id}
                               className={`absolute top-1/2 -translate-y-1/2 rounded border-l-4 px-2 shadow-sm h-7 text-xs flex items-center gap-1.5 min-w-0 ${colors.border} ${colors.bg}`}
                               style={{
-                                left: `${left}px`,
-                                width: `${MIN_FLIGHT_WIDTH}px`,
+                                left: `${leftPct}%`,
+                                width: `${finalWidthPct}%`,
+                                minWidth: MIN_FLIGHT_WIDTH,
                               }}
                             >
                               <span className="font-medium text-gray-700 shrink-0">
@@ -398,11 +461,11 @@ export function DispatchBoard() {
           >
             <div
               className="absolute top-0 bottom-0 w-[2px] bg-red-500"
-              style={{ left: nowIndicator.nowLeft }}
+              style={{ left: `${nowIndicator.nowLeftPct}%` }}
             />
             <div
               className="absolute -top-5 text-xs text-red-600 font-semibold"
-              style={{ left: nowIndicator.nowLeft }}
+              style={{ left: `${nowIndicator.nowLeftPct}%` }}
             >
               NOW
             </div>

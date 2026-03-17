@@ -36,6 +36,16 @@ export type Database = {
         Insert: Omit<Profile, "created_at">
         Update: Partial<Omit<Profile, "id">>
       }
+      admin_users: {
+        Row: AdminUser
+        Insert: Omit<AdminUser, "id" | "created_at">
+        Update: Partial<Omit<AdminUser, "id">>
+      }
+      daily_report_recipients: {
+        Row: DailyReportRecipient
+        Insert: Omit<DailyReportRecipient, "id" | "created_at">
+        Update: Partial<Omit<DailyReportRecipient, "id">>
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
@@ -60,6 +70,7 @@ export type Flight = {
   active?: boolean
   dia_semana?: string | null
   last_seen_email?: string | null
+  tempo_voo?: number | null
 }
 
 export type Pilot = {
@@ -108,5 +119,22 @@ export type Profile = {
 }
 
 export type FlightTable = "mono_flights" | "jato_flights" | "helicoptero_flights"
+
+export type AdminUser = {
+  id: string
+  email: string
+  created_at?: string
+}
+
+export type DailyReportRecipient = {
+  id: string
+  email: string
+  send_mono: boolean
+  send_jato: boolean
+  send_helicoptero: boolean
+  send_all: boolean
+  active: boolean
+  created_at?: string
+}
 
 export type TipoDetectado = "helicoptero" | "mono" | "jato"

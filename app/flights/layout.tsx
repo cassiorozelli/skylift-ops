@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "@/lib/supabaseClient"
 import { Button } from "@/components/ui/button"
-import { Plane, LogOut, Users, Loader2 } from "lucide-react"
+import { Plane, LogOut, Users, Loader2, Settings } from "lucide-react"
 
 export default function FlightsLayout({
   children,
@@ -24,6 +24,9 @@ export default function FlightsLayout({
         const { data: { user }, error } = await supabase.auth.getUser()
         if (error) {
           console.error("Auth error:", error)
+          if (error.message?.includes("Refresh Token") || error.message?.includes("refresh_token")) {
+            await supabase.auth.signOut()
+          }
           setHasUser(false)
           router.push("/login")
           setAuthChecked(true)
@@ -89,6 +92,12 @@ export default function FlightsLayout({
             Skylift Ops
           </Link>
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" asChild className="h-10 min-w-[44px] sm:min-w-0">
+              <Link href="/admin" className="gap-2 px-4">
+                <Settings className="h-4 w-4" />
+                <span className="hidden sm:inline">Admin</span>
+              </Link>
+            </Button>
             {ready && isAdmin && (
               <Button variant="outline" size="sm" asChild className="h-10 min-w-[44px] sm:min-w-0">
                 <Link href="/dashboard/usuarios" className="gap-2 px-4">

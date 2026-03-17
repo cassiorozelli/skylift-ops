@@ -1,0 +1,636 @@
+{
+  "name": "Monitoramento de Voos",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "dataPropertyName": "body.content",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "TEXT",
+              "cssSelector": "BODY"
+            },
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        112,
+        -208
+      ],
+      "id": "8d591c87-656b-4554-ae58-702749092bf9",
+      "name": "HTML"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        464,
+        -64
+      ],
+      "id": "bbcb48ff-9fb3-4199-a8ef-09a510461156",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "dklkDHoMKkX49wIx",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "\n",
+        "height": 640,
+        "width": 1744,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -224,
+        -304
+      ],
+      "typeVersion": 1,
+      "id": "264ca17f-ce83-4813-a155-f374b3aa3da5",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "output": "raw",
+        "filters": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.microsoftOutlookTrigger",
+      "typeVersion": 1,
+      "position": [
+        -176,
+        -208
+      ],
+      "id": "7b1bb4de-271c-4357-808f-303592818591",
+      "name": "Microsoft Outlook Trigger",
+      "notesInFlow": true,
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "3XlWpVtwqYSwoclo",
+          "name": "Microsoft Outlook account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "let text = $json.TEXT || \"\";\n\n// remover excesso de quebras de linha\ntext = text.replace(/\\n{3,}/g, \"\\n\\n\");\n\n// remover espaços duplicados\ntext = text.replace(/[ \\t]+/g, \" \");\n\n// remover linhas vazias repetidas\ntext = text.replace(/(\\n\\s*)+\\n/g, \"\\n\\n\");\n\n// remover linhas com traços (assinaturas)\ntext = text.replace(/-{5,}.*/g, \"\");\n\n// trim geral\ntext = text.trim();\n\nreturn {\n  json: {\n    TEXT: text\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        304,
+        -208
+      ],
+      "id": "4de07fab-7fa5-437c-a191-80971cc57279",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Você é um extrator determinístico de dados estruturados para uma empresa de táxi aéreo.\n\nRegras obrigatórias:\n- Você NÃO deve explicar nada.\n- Você NÃO deve comentar nada.\n- Você deve retornar SOMENTE JSON válido.\n- Você deve obedecer rigorosamente às regras fornecidas pelo usuário.\n- Nunca inclua texto fora do JSON."
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "=Você é um sistema determinístico de extração de voos de uma operação de táxi aéreo.\n\nSua tarefa é analisar o texto abaixo e extrair TODOS os voos mencionados.\n\nRetorne EXCLUSIVAMENTE um JSON válido.\n\nNÃO escreva explicações.\nNÃO escreva comentários.\nNÃO escreva texto fora do JSON.\n\n────────────────────────────────\n\nOBJETIVO\n\nExtrair voos e classificá-los em uma das três categorias:\n\nmono\njato\nhelicoptero\n\n────────────────────────────────\n\nREGRAS GERAIS\n\n1. Cada voo deve ser um objeto separado dentro do array \"voos\".\n\n2. Considere como voo qualquer linha que contenha um TRECHO DE DESLOCAMENTO.\n\nUm trecho de deslocamento normalmente contém:\n\nx\n/\npara\n\nExemplos válidos:\n\nGIG x POÇOS\nPoços x GIG\nCGH x Trancoso\nTrancoso x CGH\nGolden Green para Santos\nLagoa / Jacarepaguá\n\n3. Um voo deve ser extraído mesmo que:\n\n- não tenha passageiro\n- não tenha aeronave\n- não tenha horário\n\n4. NÃO invente dados.\n\nSe um campo não estiver presente use \"\".\n\n5. NÃO junte voos diferentes.\n\n────────────────────────────────\n\nREGRA DE PASSAGEIRO EM TÍTULO\n\nSe existir um título indicando passageiro, por exemplo:\n\nVoos Fábio (Pilatus)\n\ntodos os voos abaixo desse título pertencem a esse passageiro\naté aparecer outro título ou o fim da lista.\n\nNesse caso:\n\npassageiros = \"Fábio\"\n\n────────────────────────────────\n\nREGRA DE HERANÇA DE AERONAVE DO TÍTULO\n\nSe o título indicar uma aeronave entre parênteses, por exemplo:\n\nVoos Fábio (Pilatus)\n\nou\n\nVoos João (Caravan)\n\nentão todos os voos listados abaixo desse título devem usar essa aeronave.\n\nNesse caso:\n\naeronave = texto dentro dos parênteses.\n\nExemplo:\n\nVoos Fábio (Pilatus)\n\n24/03 – CGH x Trancoso\n27/03 – Trancoso x CGH\n\nResultado:\n\naeronave = \"Pilatus\" para ambos os voos.\n\nEssa aeronave deve ser aplicada até aparecer outro título ou o fim da lista.\n\n────────────────────────────────\n\nREGRA ESPECIAL — PASSAGEIROS EM ANEXO\n\nSe a palavra \"ANEXO\" aparecer na linha do voo:\n\nexemplo:\n\n16:30 - CARAVAN - GIG x POÇOS - ANEXO\n\nsignifica que a lista de passageiros está em um arquivo anexo.\n\nNesse caso:\n\npassageiros = \"ANEXO\"\n\n────────────────────────────────\n\nREGRA DE DATA\n\nSe a data aparecer em um cabeçalho acima do voo:\n\n16/03 - segunda\n\nessa data deve ser aplicada aos voos listados abaixo\naté aparecer outra data.\n\n────────────────────────────────\n\nREGRA DE ORDEM NO DIA\n\nSe um passageiro tiver mais de um voo no mesmo dia:\n\nuse o campo ordem_dia\n\nRegras:\n\n- começar em 1\n- ordenar por horário\n- voos sem horário vêm primeiro\n\nSe houver apenas um voo no dia:\n\nordem_dia = 1\n\n────────────────────────────────\n\nREGRA CRÍTICA — TRECHO DO VOO\n\nO campo destino deve conter o TRECHO exatamente como aparece no email.\n\nNÃO interpretar origem ou destino.\nNÃO modificar o texto.\nNÃO remover partes do trecho.\n\nExemplos:\n\n\"Lagoa x Cardeiros\"\n\"TVGSP x Lagoa\"\n\"Lagoa / TVGSP\"\n\"Golden Green para Santos\"\n\n────────────────────────────────\n\nCLASSIFICAÇÃO DAS AERONAVES\n\nMONOMOTORES → tipo_detectado = \"mono\"\n\nAeronaves:\n\nPilatus PC-12\nCaravan\n\nMatrículas possíveis:\n\nPS-NVZ\nPR-WZR\n\n────────────────────────────────\n\nJATOS → tipo_detectado = \"jato\"\n\nAeronaves:\n\nGulfstream 450\nGulfstream G550\nGulfstream G650\n\nMatrículas possíveis:\n\nPR-VZR\nPR-WRO\nPP-WSR\n\n────────────────────────────────\n\nHELICÓPTEROS → tipo_detectado = \"helicoptero\"\n\nAeronaves:\n\nB3\nBell 429\n145\n155\n\nMatrículas possíveis:\n\nPR-FAD\nPP-CGP\nPS-GJR\nPR-YRM\n\n────────────────────────────────\n\nREGRA ABSOLUTA — HELIPONTOS\n\nOs locais abaixo são helipontos:\n\nLagoa\nGolden Green\nTV Globo\n\nSe qualquer trecho envolver esses locais:\n\ntipo_detectado = \"helicoptero\"\n\nEssa regra prevalece sobre a aeronave.\n\n────────────────────────────────\n\nFORMATO DE SAÍDA OBRIGATÓRIO\n\n{\n \"voos\": [\n  {\n   \"tipo_detectado\": \"\",\n   \"data\": \"\",\n   \"dia_semana\": \"\",\n   \"hora\": \"\",\n   \"aeronave\": \"\",\n   \"destino\": \"\",\n   \"passageiros\": \"\",\n   \"ordem_dia\": 1\n  }\n ]\n}\n\n────────────────────────────────\n\nTEXTO PARA ANÁLISE:\n\n{{$json.TEXT}}"
+            }
+          ]
+        },
+        "batching": {
+          "delayBetweenBatches": 60
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        528,
+        -208
+      ],
+      "id": "147e256f-ae09-48e5-a239-bb0d89abe04d",
+      "name": "Basic LLM Chain",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://pdpzvdohgpdpbwbqtwea.supabase.co/rest/v1/email_processing_status?on_conflict=tipo_operacao",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkcHp2ZG9oZ3BkcGJ3YnF0d2VhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjExOTI2MCwiZXhwIjoyMDg3Njk1MjYwfQ.RMujHXWrrZpE6kExqiQMP_fIA5bd5VhRA2RdXHyaEo0"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkcHp2ZG9oZ3BkcGJ3YnF0d2VhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjExOTI2MCwiZXhwIjoyMDg3Njk1MjYwfQ.RMujHXWrrZpE6kExqiQMP_fIA5bd5VhRA2RdXHyaEo0"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n \"tipo_operacao\": \"{{$items('Normalização Voos')[0].json.tipo_detectado}}\",\n \"last_email_subject\": \"{{$node['Microsoft Outlook Trigger'].json['subject']}}\",\n \"last_email_from\": \"{{$node['Microsoft Outlook Trigger'].json['from']['emailAddress']['address']}}\",\n \"last_email_received\": \"{{ DateTime.fromISO($node['Microsoft Outlook Trigger'].json['receivedDateTime']).setZone('America/Sao_Paulo').toISO() }}\",\n \"last_processed_at\": \"{{ DateTime.now().setZone('America/Sao_Paulo').toISO() }}\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1312,
+        -208
+      ],
+      "id": "3e9d717a-5734-4da1-9d4f-fb17a8d2d8b6",
+      "name": "Status E-mail",
+      "retryOnFail": true,
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ `https://pdpzvdohgpdpbwbqtwea.supabase.co/rest/v1/${$json.tabela_destino}?on_conflict=flight_id` }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkcHp2ZG9oZ3BkcGJ3YnF0d2VhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjExOTI2MCwiZXhwIjoyMDg3Njk1MjYwfQ.RMujHXWrrZpE6kExqiQMP_fIA5bd5VhRA2RdXHyaEo0"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkcHp2ZG9oZ3BkcGJ3YnF0d2VhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjExOTI2MCwiZXhwIjoyMDg3Njk1MjYwfQ.RMujHXWrrZpE6kExqiQMP_fIA5bd5VhRA2RdXHyaEo0"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"flight_id\": \"{{$json.flight_id}}\",\n  \"data\": \"{{$json.data}}\",\n  \"dia_semana\": \"{{$json.dia_semana}}\",\n  \"hora\": \"{{$json.hora}}\",\n  \"aeronave\": \"{{$json.aeronave}}\",\n  \"destino\": \"{{$json.destino}}\",\n  \"passageiros\": \"{{$json.passageiros}}\",\n  \"ordem_dia\": {{$json.ordem_dia}},\n  \"last_seen_email\": \"{{$now}}\",\n  \"active\": true\n}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1152,
+        -16
+      ],
+      "id": "276dc745-5d57-4df8-9ecc-fc6f6cf011f2",
+      "name": "Atualização DB",
+      "retryOnFail": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * PIPELINE PÓS LLM\n * Converte resposta do LLM em itens para Supabase\n */\n\n// normalizador\nconst norm = (v) =>\n  (v ?? \"\")\n    .toString()\n    .normalize(\"NFD\")\n    .replace(/[\\u0300-\\u036f]/g, \"\")\n    .trim()\n    .toLowerCase()\n    .replace(/\\s+/g, \"_\")\n    .replace(/[^a-z0-9_]/g, \"\");\n\n// converter data\nfunction convertDateToISO(dateStr) {\n\n  if (!dateStr) return null;\n\n  if (/^\\d{2}\\/\\d{2}\\/\\d{4}$/.test(dateStr)) {\n    const [d,m,y] = dateStr.split(\"/\");\n    return `${y}-${m}-${d}`;\n  }\n\n  if (/^\\d{2}\\/\\d{2}$/.test(dateStr)) {\n    const [d,m] = dateStr.split(\"/\");\n    const y = new Date().getFullYear();\n    return `${y}-${m}-${d}`;\n  }\n\n  return dateStr;\n}\n\n\n// ======================\n// pegar resposta do LLM\n// ======================\n\nlet raw = $json.text || \"\";\n\n// remover ```json ```\nraw = raw.replace(/```json/g, \"\").replace(/```/g, \"\").trim();\n\nlet parsed;\n\ntry {\n  parsed = JSON.parse(raw);\n} catch (e) {\n  throw new Error(\"Erro ao fazer parse do JSON do LLM\");\n}\n\nconst voos = parsed.voos || [];\n\nconst output = voos.map(voo => {\n\n  const tipo_detectado = voo.tipo_detectado || \"\";\n\n  const dataISO = convertDateToISO(voo.data);\n\n  const dia_semana = voo.dia_semana || \"\";\n  const hora = voo.hora || \"\";\n  const aeronave = voo.aeronave || \"\";\n  const destino = voo.destino || \"\";\n  const passageiros = voo.passageiros || \"\";\n\n  const ordem_dia =\n    Number(voo.ordem_dia) && Number(voo.ordem_dia) > 0\n      ? Number(voo.ordem_dia)\n      : 1;\n\n  // novo ID estável\n  const flight_id = [\n    norm(dataISO),\n    norm(destino),\n    ordem_dia\n  ].join(\"_\");\n\n  const tabela_destino = `${tipo_detectado}_flights`;\n\n  return {\n    json: {\n      tipo_detectado,\n      tabela_destino,\n      flight_id,\n      data: dataISO,\n      dia_semana,\n      hora,\n      aeronave,\n      destino,\n      passageiros,\n      ordem_dia\n    }\n  };\n\n});\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        -208
+      ],
+      "id": "e1500014-44fa-4d9f-88f2-c3298099c798",
+      "name": "Normalização Voos"
+    },
+    {
+      "parameters": {
+        "url": "=https://pdpzvdohgpdpbwbqtwea.supabase.co/rest/v1/{{$items(\"Normalização Voos\")[0].json.tabela_destino}}?select=flight_id,piloto1,piloto2,active",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkcHp2ZG9oZ3BkcGJ3YnF0d2VhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjExOTI2MCwiZXhwIjoyMDg3Njk1MjYwfQ.RMujHXWrrZpE6kExqiQMP_fIA5bd5VhRA2RdXHyaEo0"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkcHp2ZG9oZ3BkcGJ3YnF0d2VhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjExOTI2MCwiZXhwIjoyMDg3Njk1MjYwfQ.RMujHXWrrZpE6kExqiQMP_fIA5bd5VhRA2RdXHyaEo0"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        48,
+        16
+      ],
+      "id": "c147c232-76b0-4e5c-a290-f3a9338e5e34",
+      "name": "Verifica Voos DB",
+      "retryOnFail": true,
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// pega todos os voos do email\nconst voos = items.map(item => item.json);\n\n// categoria (todos do mesmo email devem ser iguais)\nconst tabela_destino = voos[0]?.tabela_destino || null;\n\n// lista de flight_id do email\nconst flight_ids_email = voos.map(v => v.flight_id);\n\nreturn [\n  {\n    json: {\n      tabela_destino,\n      voos_email: voos,\n      flight_ids_email\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -144,
+        0
+      ],
+      "id": "ef5544b3-66ef-4688-99a8-490f6c6b111f",
+      "name": "Agrupar Voos Email"
+    },
+    {
+      "parameters": {
+        "jsCode": "// voos vindos do email\nconst voosEmail = $items(\"Agrupar Voos Email\")[0].json.voos_email || [];\n\n// categoria\nconst tabelaEmail = voosEmail.length ? voosEmail[0].tabela_destino : null;\n\n// data atual\nconst hoje = new Date().toISOString().slice(0,10);\n\n// voos do banco (filtrados)\nconst voosDB = $items(\"Extrair Voos DB\")\n  .map(i => i.json)\n  .filter(v => \n    v.tabela_destino === tabelaEmail &&\n    v.data >= hoje\n  );\n\n// ids\nconst emailIds = voosEmail.map(v => v.flight_id);\nconst dbIds = voosDB.map(v => v.flight_id);\n\n// novos\nconst voosNovos = voosEmail\n  .filter(v => !dbIds.includes(v.flight_id))\n  .map(v => ({ ...v, acao: \"insert\" }));\n\n// existentes\nconst voosExistentes = voosEmail\n  .filter(v => dbIds.includes(v.flight_id))\n  .map(v => ({ ...v, acao: \"update\" }));\n\n// removidos\nconst voosRemovidos = voosDB\n  .filter(v => !emailIds.includes(v.flight_id))\n  .map(v => ({ ...v, acao: \"deactivate\" }));\n\nconst resultado = [\n  ...voosNovos,\n  ...voosExistentes,\n  ...voosRemovidos\n];\n\nreturn resultado.map(v => ({ json: v }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        48
+      ],
+      "id": "be25131c-f46d-4ba1-abc7-d3daa3b50717",
+      "name": "Comparar Voos Email e DB",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ `https://pdpzvdohgpdpbwbqtwea.supabase.co/rest/v1/${$json.tabela_destino}?flight_id=eq.${$json.flight_id}` }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "active",
+              "value": "eq.true"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkcHp2ZG9oZ3BkcGJ3YnF0d2VhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjExOTI2MCwiZXhwIjoyMDg3Njk1MjYwfQ.RMujHXWrrZpE6kExqiQMP_fIA5bd5VhRA2RdXHyaEo0"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkcHp2ZG9oZ3BkcGJ3YnF0d2VhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjExOTI2MCwiZXhwIjoyMDg3Njk1MjYwfQ.RMujHXWrrZpE6kExqiQMP_fIA5bd5VhRA2RdXHyaEo0"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"active\": false\n}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1152,
+        128
+      ],
+      "id": "412c07bc-5bc2-4730-b217-76467994ca31",
+      "name": "Desativar Voos",
+      "retryOnFail": true,
+      "alwaysOutputData": true,
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "jsCode": "const voos = $json.body || [];\n\nreturn voos.map(v => ({\n  json: {\n    ...v,\n    tabela_destino: $node[\"Agrupar Voos Email\"].json.tabela_destino\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        256,
+        48
+      ],
+      "id": "1c159d55-f9b4-4b02-9d00-de061cc530c3",
+      "name": "Extrair Voos DB"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.acao }}",
+                    "rightValue": "insert",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "c2af215e-ff2e-4285-8754-c5c15def6f3a"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "f983ca2e-0347-4020-8572-d5a912132e90",
+                    "leftValue": "={{ $json.acao }}",
+                    "rightValue": "update",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "ac2e09ec-047c-49b7-aeff-517990590ec8",
+                    "leftValue": "={{ $json.acao }}",
+                    "rightValue": "deactivate",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        688,
+        48
+      ],
+      "id": "06c670af-70a9-4f70-8953-1f9231e692f3",
+      "name": "Switch"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "HTML": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Microsoft Outlook Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Normalização Voos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualização DB": {
+      "main": [
+        []
+      ]
+    },
+    "Normalização Voos": {
+      "main": [
+        [
+          {
+            "node": "Status E-mail",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Agrupar Voos Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verifica Voos DB": {
+      "main": [
+        [
+          {
+            "node": "Extrair Voos DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agrupar Voos Email": {
+      "main": [
+        [
+          {
+            "node": "Verifica Voos DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Desativar Voos": {
+      "main": [
+        []
+      ]
+    },
+    "Extrair Voos DB": {
+      "main": [
+        [
+          {
+            "node": "Comparar Voos Email e DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comparar Voos Email e DB": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Atualização DB",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Atualização DB",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Desativar Voos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "5a5026cb-23c8-42c3-a230-029d64ae6107",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ef548d07c9555e009c0006ce9e1ce3ef63f53d309899b0863432589439f55d66"
+  },
+  "id": "Qt2uDIm8oGyG_CUn6SzPi",
+  "tags": []
+}
