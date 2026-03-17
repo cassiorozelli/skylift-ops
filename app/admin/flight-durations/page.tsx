@@ -87,7 +87,7 @@ export default function FlightDurationsPage() {
     }
 
     const merged: FlightDuration[] = []
-    for (const [key, route] of routes) {
+    Array.from(routes).forEach(([key, route]) => {
       const existing = durationsMap.get(key)
       merged.push({
         id: existing?.id,
@@ -96,7 +96,7 @@ export default function FlightDurationsPage() {
         destino: route.destino,
         tempo_medio_minutos: existing?.tempo_medio_minutos ?? 0,
       })
-    }
+    })
     for (const d of (durationsRes.data ?? []) as FlightDuration[]) {
       const key = routeKey(d.aeronave, d.origem, d.destino)
       if (!routes.has(key)) {
@@ -182,15 +182,15 @@ export default function FlightDurationsPage() {
   }
 
   const uniqueAeronaves = useMemo(
-    () => [...new Set(items.map((i) => i.aeronave).filter(Boolean))].sort(),
+    () => Array.from(new Set(items.map((i) => i.aeronave).filter(Boolean))).sort(),
     [items]
   )
   const uniqueOrigens = useMemo(
-    () => [...new Set(items.map((i) => i.origem).filter(Boolean))].sort(),
+    () => Array.from(new Set(items.map((i) => i.origem).filter(Boolean))).sort(),
     [items]
   )
   const uniqueDestinos = useMemo(
-    () => [...new Set(items.map((i) => i.destino).filter(Boolean))].sort(),
+    () => Array.from(new Set(items.map((i) => i.destino).filter(Boolean))).sort(),
     [items]
   )
 
