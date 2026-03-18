@@ -6,6 +6,9 @@ const BRAZIL_TZ = "America/Sao_Paulo"
 
 type AircraftType = "mono" | "jato" | "helicoptero"
 
+/** Flight row with optional DB fields origem / destino_final */
+type FlightRow = Flight & { origem?: string | null; destino_final?: string | null }
+
 export type TodayFlightItem = {
   date: string
   time: string
@@ -14,21 +17,6 @@ export type TodayFlightItem = {
   destination: string
   operator: string
   pilot: string
-}
-
-/** Parse "CGP x GIG", "CGP - GIG", "CGP → GIG" into { origin, destination }. Normalize separators to "x". */
-function parseRoute(destino: string | null): { origin: string; destination: string } {
-  const r = (destino ?? "").trim()
-  if (!r) return { origin: "", destination: "" }
-  const normalized = r.replace(/\s*→\s*/g, " x ").replace(/\s*-\s*/g, " x ")
-  const match = normalized.match(/^(.+?)\s+x\s+(.+)$/i)
-  if (match) {
-    return {
-      origin: (match[1] ?? "").trim(),
-      destination: (match[2] ?? "").trim(),
-    }
-  }
-  return { origin: "", destination: r }
 }
 
 /** Normalize time to HH:mm. */
@@ -58,17 +46,16 @@ function formatPilot(piloto1: string | null | undefined, piloto2: string | null 
 }
 
 function toItem(
-  f: Flight,
+  f: FlightRow,
   aircraftType: AircraftType,
   dateKey: string
 ): TodayFlightItem {
-  const { origin, destination } = parseRoute(f.destino ?? null)
   return {
-    date: dateKey ?? "",
+    date: (dateKey ?? "").trim() || "",
     time: normalizeTime(f.hora ?? null),
     aircraft_type: aircraftType,
-    origin: origin || "",
-    destination: destination || "",
+    origin: (f.origem ?? "").trim(),
+    destination: (f.destino_final ?? "").trim(),
     operator: "",
     pilot: formatPilot(f.piloto1, f.piloto2),
   }
@@ -86,28 +73,28 @@ export async function GET() {
     const [monoRes, jatoRes, heliRes] = await Promise.all([
       supabase
         .from("mono_flights")
-        .select("id, data, hora, aeronave, destino, piloto1, piloto2, passageiros")
+        .select("id, data, hora, aeronave, origem, destino_final, piloto1, piloto2, passageiros")
         .eq("data", dateKey)
         .eq("active", true),
       supabase
         .from("jato_flights")
-        .select("id, data, hora, aeronave, destino, piloto1, piloto2, passageiros")
+        .select("id, data, hora, aeronave, origem, destino_final, piloto1, piloto2, passageiros")
         .eq("data", dateKey)
         .eq("active", true),
       supabase
         .from("helicoptero_flights")
-        .select("id, data, hora, aeronave, destino, piloto1, piloto2, passageiros")
+        .select("id, data, hora, aeronave, origem, destino_final, piloto1, piloto2, passageiros")
         .eq("data", dateKey)
         .eq("active", true),
     ])
 
-    const mono = ((monoRes.data ?? []) as Flight[]).map((f) =>
+    const mono = ((monoRes.data ?? []) as FlightRow[]).map((f) =>
       toItem(f, "mono", dateKey)
     )
-    const jato = ((jatoRes.data ?? []) as Flight[]).map((f) =>
+    const jato = ((jatoRes.data ?? []) as FlightRow[]).map((f) =>
       toItem(f, "jato", dateKey)
     )
-    const helicoptero = ((heliRes.data ?? []) as Flight[]).map((f) =>
+    const helicoptero = ((heliRes.data ?? []) as FlightRow[]).map((f) =>
       toItem(f, "helicoptero", dateKey)
     )
 
