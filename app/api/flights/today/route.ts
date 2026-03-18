@@ -4,7 +4,6 @@ import type { Flight } from "@/types/database"
 
 type AircraftType = "mono" | "jato" | "helicoptero"
 
-/** Flight row with optional DB fields */
 type FlightRow = Flight & {
   origem?: string | null
   destino_final?: string | null
@@ -62,23 +61,16 @@ function toItem(
   }
 }
 
-/**
- * GET /api/flights/today
- * Fetch flights from all categories using exact DATE match (no timezone)
- */
 export async function GET() {
   try {
     const supabase = getSupabaseServer()
 
-    // ✅ CORREÇÃO DEFINITIVA DA DATA
-    const now = new Date()
-    const today = [
-      now.getFullYear(),
-      String(now.getMonth() + 1).padStart(2, "0"),
-      String(now.getDate()).padStart(2, "0"),
-    ].join("-")
+    // ✅ DATA CORRETA NO FUSO DO BRASIL
+    const today = new Date().toLocaleDateString("en-CA", {
+      timeZone: "America/Sao_Paulo",
+    })
 
-    console.log("TODAY:", today)
+    console.log("TODAY (BR):", today)
 
     const [monoRes, jatoRes, heliRes] = await Promise.all([
       supabase
@@ -106,7 +98,7 @@ export async function GET() {
         .eq("active", true),
     ])
 
-    // 🔍 DEBUG (pode remover depois)
+    // 🔍 DEBUG
     console.log("MONO:", monoRes.data?.length)
     console.log("JATO:", jatoRes.data?.length)
     console.log("HELI:", heliRes.data?.length)
