@@ -4,7 +4,7 @@ import type { Flight } from "@/types/database"
 
 type AircraftType = "mono" | "jato" | "helicoptero"
 
-/** Flight row with optional DB fields origem / destino_final / prefixo */
+/** Flight row with optional DB fields */
 type FlightRow = Flight & {
   origem?: string | null
   destino_final?: string | null
@@ -23,29 +23,34 @@ export type TodayFlightItem = {
   aircraft: string
 }
 
-/** Normalize time to HH:mm. */
+/** Normalize time to HH:mm */
 function normalizeTime(hora: string | null): string {
   if (!hora) return "00:00"
-  const parts = (hora.trim().split(":") as [string, string?])
+  const parts = hora.trim().split(":")
   const h = (parts[0] ?? "0").padStart(2, "0")
   const m = (parts[1] ?? "0").padStart(2, "0")
   return `${h}:${m}`
 }
 
-function formatPilot(piloto1: string | null | undefined, piloto2: string | null | undefined): string {
+/** Format pilot */
+function formatPilot(
+  piloto1: string | null | undefined,
+  piloto2: string | null | undefined
+): string {
   const p1 = (piloto1 ?? "").trim()
   const p2 = (piloto2 ?? "").trim()
   if (p1 && p2) return `${p1} / ${p2}`
   return p1 || p2 || ""
 }
 
+/** Map DB row to API response */
 function toItem(
   f: FlightRow,
   aircraftType: AircraftType,
   dateKey: string
 ): TodayFlightItem {
   return {
-    date: (dateKey ?? "").trim() || "",
+    date: dateKey,
     time: normalizeTime(f.hora ?? null),
     aircraft_type: aircraftType,
     origin: (f.origem ?? "").trim(),
@@ -59,40 +64,63 @@ function toItem(
 
 /**
  * GET /api/flights/today
- * Fetches and merges flights from all categories (mono, jato, helicoptero).
- * Filters: data = today (server date YYYY-MM-DD), active = true. No timezone conversion.
+ * Fetch flights from all categories using exact DATE match (no timezone)
  */
 export async function GET() {
   try {
     const supabase = getSupabaseServer()
-    const today = new Date().toLocaleDateString("en-CA")
+
+    // ✅ CORREÇÃO DEFINITIVA DA DATA
+    const now = new Date()
+    const today = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, "0"),
+      String(now.getDate()).padStart(2, "0"),
+    ].join("-")
+
+    console.log("TODAY:", today)
 
     const [monoRes, jatoRes, heliRes] = await Promise.all([
       supabase
         .from("mono_flights")
-        .select("id, data, hora, aeronave, prefixo, origem, destino_final, piloto1, piloto2, passageiros")
+        .select(
+          "id, data, hora, aeronave, prefixo, origem, destino_final, piloto1, piloto2, passageiros"
+        )
         .eq("data", today)
         .eq("active", true),
+
       supabase
         .from("jato_flights")
-        .select("id, data, hora, aeronave, prefixo, origem, destino_final, piloto1, piloto2, passageiros")
+        .select(
+          "id, data, hora, aeronave, prefixo, origem, destino_final, piloto1, piloto2, passageiros"
+        )
         .eq("data", today)
         .eq("active", true),
+
       supabase
         .from("helicoptero_flights")
-        .select("id, data, hora, aeronave, prefixo, origem, destino_final, piloto1, piloto2, passageiros")
+        .select(
+          "id, data, hora, aeronave, prefixo, origem, destino_final, piloto1, piloto2, passageiros"
+        )
         .eq("data", today)
         .eq("active", true),
     ])
 
-    const monoFlights: TodayFlightItem[] = ((monoRes.data ?? []) as FlightRow[]).map((f) =>
-      toItem(f, "mono", today)
+    // 🔍 DEBUG (pode remover depois)
+    console.log("MONO:", monoRes.data?.length)
+    console.log("JATO:", jatoRes.data?.length)
+    console.log("HELI:", heliRes.data?.length)
+
+    const monoFlights: TodayFlightItem[] = (monoRes.data ?? []).map((f) =>
+      toItem(f as FlightRow, "mono", today)
     )
-    const jatoFlights: TodayFlightItem[] = ((jatoRes.data ?? []) as FlightRow[]).map((f) =>
-      toItem(f, "jato", today)
+
+    const jatoFlights: TodayFlightItem[] = (jatoRes.data ?? []).map((f) =>
+      toItem(f as FlightRow, "jato", today)
     )
-    const helicopteroFlights: TodayFlightItem[] = ((heliRes.data ?? []) as FlightRow[]).map((f) =>
-      toItem(f, "helicoptero", today)
+
+    const helicopteroFlights: TodayFlightItem[] = (heliRes.data ?? []).map((f) =>
+      toItem(f as FlightRow, "helicoptero", today)
     )
 
     const allFlights: TodayFlightItem[] = [
