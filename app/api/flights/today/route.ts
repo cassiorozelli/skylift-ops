@@ -65,12 +65,11 @@ export async function GET() {
   try {
     const supabase = getSupabaseServer()
 
-    // ✅ DATA CORRETA NO FUSO DO BRASIL
-    const today = new Date().toLocaleDateString("en-CA", {
-      timeZone: "America/Sao_Paulo",
-    })
+    // ✅ DATA DIRETO DO BANCO (SEM CONVERSÃO)
+    const { data: today, error } = await supabase.rpc("get_today")
+    if (error) throw error
 
-    console.log("TODAY (BR):", today)
+    console.log("TODAY FROM DB:", today)
 
     const [monoRes, jatoRes, heliRes] = await Promise.all([
       supabase
@@ -99,20 +98,26 @@ export async function GET() {
     ])
 
     // 🔍 DEBUG
+    if (monoRes.error) console.error("MONO ERROR:", monoRes.error)
+    if (jatoRes.error) console.error("JATO ERROR:", jatoRes.error)
+    if (heliRes.error) console.error("HELI ERROR:", heliRes.error)
+
     console.log("MONO:", monoRes.data?.length)
     console.log("JATO:", jatoRes.data?.length)
     console.log("HELI:", heliRes.data?.length)
 
+    const dateStr = String(today)
+
     const monoFlights: TodayFlightItem[] = (monoRes.data ?? []).map((f) =>
-      toItem(f as FlightRow, "mono", today)
+      toItem(f as FlightRow, "mono", dateStr)
     )
 
     const jatoFlights: TodayFlightItem[] = (jatoRes.data ?? []).map((f) =>
-      toItem(f as FlightRow, "jato", today)
+      toItem(f as FlightRow, "jato", dateStr)
     )
 
     const helicopteroFlights: TodayFlightItem[] = (heliRes.data ?? []).map((f) =>
-      toItem(f as FlightRow, "helicoptero", today)
+      toItem(f as FlightRow, "helicoptero", dateStr)
     )
 
     const allFlights: TodayFlightItem[] = [
