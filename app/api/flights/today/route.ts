@@ -2,8 +2,6 @@ import { NextResponse } from "next/server"
 import { getSupabaseServer } from "@/lib/supabaseServer"
 import type { Flight } from "@/types/database"
 
-const BRAZIL_TZ = "America/Sao_Paulo"
-
 type AircraftType = "mono" | "jato" | "helicoptero"
 
 /** Flight row with optional DB fields origem / destino_final / prefixo */
@@ -34,16 +32,6 @@ function normalizeTime(hora: string | null): string {
   return `${h}:${m}`
 }
 
-/** Today's date in Brazil (YYYY-MM-DD). */
-function getTodayBrazil(): string {
-  return new Date().toLocaleDateString("en-CA", {
-    timeZone: BRAZIL_TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  })
-}
-
 function formatPilot(piloto1: string | null | undefined, piloto2: string | null | undefined): string {
   const p1 = (piloto1 ?? "").trim()
   const p2 = (piloto2 ?? "").trim()
@@ -71,43 +59,49 @@ function toItem(
 
 /**
  * GET /api/flights/today
- * Returns today's flights (Brazil timezone) from mono, jato, helicoptero.
+ * Fetches and merges flights from all categories (mono, jato, helicoptero).
+ * Filters: data = today (server date YYYY-MM-DD), active = true. No timezone conversion.
  */
 export async function GET() {
   try {
     const supabase = getSupabaseServer()
+    const today = new Date().toISOString().slice(0, 10)
 
-    // TEMPORARY: no date filter — fetch all active flights to verify Supabase fetch
     const [monoRes, jatoRes, heliRes] = await Promise.all([
       supabase
         .from("mono_flights")
         .select("id, data, hora, aeronave, prefixo, origem, destino_final, piloto1, piloto2, passageiros")
+        .eq("data", today)
         .eq("active", true),
       supabase
         .from("jato_flights")
         .select("id, data, hora, aeronave, prefixo, origem, destino_final, piloto1, piloto2, passageiros")
+        .eq("data", today)
         .eq("active", true),
       supabase
         .from("helicoptero_flights")
         .select("id, data, hora, aeronave, prefixo, origem, destino_final, piloto1, piloto2, passageiros")
+        .eq("data", today)
         .eq("active", true),
     ])
 
-    const mono = ((monoRes.data ?? []) as FlightRow[]).map((f) =>
-      toItem(f, "mono", f.data ?? "")
+    const monoFlights: TodayFlightItem[] = ((monoRes.data ?? []) as FlightRow[]).map((f) =>
+      toItem(f, "mono", today)
     )
-    const jato = ((jatoRes.data ?? []) as FlightRow[]).map((f) =>
-      toItem(f, "jato", f.data ?? "")
+    const jatoFlights: TodayFlightItem[] = ((jatoRes.data ?? []) as FlightRow[]).map((f) =>
+      toItem(f, "jato", today)
     )
-    const helicoptero = ((heliRes.data ?? []) as FlightRow[]).map((f) =>
-      toItem(f, "helicoptero", f.data ?? "")
-    )
-
-    const all: TodayFlightItem[] = [...mono, ...jato, ...helicoptero].sort(
-      (a, b) => a.time.localeCompare(b.time)
+    const helicopteroFlights: TodayFlightItem[] = ((heliRes.data ?? []) as FlightRow[]).map((f) =>
+      toItem(f, "helicoptero", today)
     )
 
-    return NextResponse.json(all)
+    const allFlights: TodayFlightItem[] = [
+      ...monoFlights,
+      ...jatoFlights,
+      ...helicopteroFlights,
+    ].sort((a, b) => a.time.localeCompare(b.time))
+
+    return NextResponse.json(allFlights)
   } catch (e) {
     const message = e instanceof Error ? e.message : "Server error"
     return NextResponse.json({ error: message }, { status: 500 })
