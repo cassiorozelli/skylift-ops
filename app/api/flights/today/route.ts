@@ -65,7 +65,7 @@ function toItem(
 export async function GET() {
   try {
     const supabase = getSupabaseServer()
-    const today = new Date().toISOString().slice(0, 10)
+    const today = new Date().toLocaleDateString("en-CA")
 
     const [monoRes, jatoRes, heliRes] = await Promise.all([
       supabase
