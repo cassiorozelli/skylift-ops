@@ -54,7 +54,7 @@ function toItem(
     operator: "",
     pilot: formatPilot(f.piloto1, f.piloto2),
     passengers: (f.passageiros ?? "").trim(),
-    aircraft: (f.prefixo ?? "").trim(),
+    aircraft: (f.aeronave ?? f.prefixo ?? "").trim(), // ✅ CORRIGIDO
   }
 }
 
