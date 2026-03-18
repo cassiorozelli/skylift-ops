@@ -22,7 +22,6 @@ export type TodayFlightItem = {
   aircraft: string
 }
 
-/** Normalize time to HH:mm */
 function normalizeTime(hora: string | null): string {
   if (!hora) return "00:00"
   const parts = hora.trim().split(":")
@@ -31,7 +30,6 @@ function normalizeTime(hora: string | null): string {
   return `${h}:${m}`
 }
 
-/** Format pilot */
 function formatPilot(
   piloto1: string | null | undefined,
   piloto2: string | null | undefined
@@ -42,7 +40,6 @@ function formatPilot(
   return p1 || p2 || ""
 }
 
-/** Map DB row to API response */
 function toItem(
   f: FlightRow,
   aircraftType: AircraftType,
@@ -65,62 +62,59 @@ export async function GET() {
   try {
     const supabase = getSupabaseServer()
 
-    // ✅ DATA DIRETO DO BANCO (SEM CONVERSÃO)
+    // 🔥 pega data do banco
     const { data: today, error } = await supabase.rpc("get_today")
     if (error) throw error
 
     console.log("TODAY FROM DB:", today)
+    console.log("TYPE OF TODAY:", typeof today)
 
     const [monoRes, jatoRes, heliRes] = await Promise.all([
       supabase
         .from("mono_flights")
-        .select(
-          "id, data, hora, aeronave, prefixo, origem, destino_final, piloto1, piloto2, passageiros"
-        )
+        .select("*")
         .eq("data", today)
         .eq("active", true),
 
       supabase
         .from("jato_flights")
-        .select(
-          "id, data, hora, aeronave, prefixo, origem, destino_final, piloto1, piloto2, passageiros"
-        )
+        .select("*")
         .eq("data", today)
         .eq("active", true),
 
       supabase
         .from("helicoptero_flights")
-        .select(
-          "id, data, hora, aeronave, prefixo, origem, destino_final, piloto1, piloto2, passageiros"
-        )
+        .select("*")
         .eq("data", today)
         .eq("active", true),
     ])
 
-    // 🔍 DEBUG
+    // 🔥 DEBUG CRÍTICO
+    console.log("MONO COUNT:", monoRes.data?.length)
+    console.log("JATO COUNT:", jatoRes.data?.length)
+    console.log("HELI COUNT:", heliRes.data?.length)
+
+    console.log("HELI RAW:", heliRes.data)
+
     if (monoRes.error) console.error("MONO ERROR:", monoRes.error)
     if (jatoRes.error) console.error("JATO ERROR:", jatoRes.error)
     if (heliRes.error) console.error("HELI ERROR:", heliRes.error)
 
-    console.log("MONO:", monoRes.data?.length)
-    console.log("JATO:", jatoRes.data?.length)
-    console.log("HELI:", heliRes.data?.length)
-
     const dateStr = String(today)
 
-    const monoFlights: TodayFlightItem[] = (monoRes.data ?? []).map((f) =>
+    const monoFlights = (monoRes.data ?? []).map((f) =>
       toItem(f as FlightRow, "mono", dateStr)
     )
 
-    const jatoFlights: TodayFlightItem[] = (jatoRes.data ?? []).map((f) =>
+    const jatoFlights = (jatoRes.data ?? []).map((f) =>
       toItem(f as FlightRow, "jato", dateStr)
     )
 
-    const helicopteroFlights: TodayFlightItem[] = (heliRes.data ?? []).map((f) =>
+    const helicopteroFlights = (heliRes.data ?? []).map((f) =>
       toItem(f as FlightRow, "helicoptero", dateStr)
     )
 
-    const allFlights: TodayFlightItem[] = [
+    const allFlights = [
       ...monoFlights,
       ...jatoFlights,
       ...helicopteroFlights,
@@ -128,6 +122,7 @@ export async function GET() {
 
     return NextResponse.json(allFlights)
   } catch (e) {
+    console.error("ERROR:", e)
     const message = e instanceof Error ? e.message : "Server error"
     return NextResponse.json({ error: message }, { status: 500 })
   }
