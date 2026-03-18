@@ -6,8 +6,12 @@ const BRAZIL_TZ = "America/Sao_Paulo"
 
 type AircraftType = "mono" | "jato" | "helicoptero"
 
-/** Flight row with optional DB fields origem / destino_final */
-type FlightRow = Flight & { origem?: string | null; destino_final?: string | null }
+/** Flight row with optional DB fields origem / destino_final / prefixo */
+type FlightRow = Flight & {
+  origem?: string | null
+  destino_final?: string | null
+  prefixo?: string | null
+}
 
 export type TodayFlightItem = {
   date: string
@@ -18,6 +22,7 @@ export type TodayFlightItem = {
   operator: string
   pilot: string
   passengers: string
+  aircraft: string
 }
 
 /** Normalize time to HH:mm. */
@@ -60,6 +65,7 @@ function toItem(
     operator: "",
     pilot: formatPilot(f.piloto1, f.piloto2),
     passengers: (f.passageiros ?? "").trim(),
+    aircraft: (f.prefixo ?? "").trim(),
   }
 }
 
@@ -75,17 +81,17 @@ export async function GET() {
     const [monoRes, jatoRes, heliRes] = await Promise.all([
       supabase
         .from("mono_flights")
-        .select("id, data, hora, aeronave, origem, destino_final, piloto1, piloto2, passageiros")
+        .select("id, data, hora, aeronave, prefixo, origem, destino_final, piloto1, piloto2, passageiros")
         .eq("data", dateKey)
         .eq("active", true),
       supabase
         .from("jato_flights")
-        .select("id, data, hora, aeronave, origem, destino_final, piloto1, piloto2, passageiros")
+        .select("id, data, hora, aeronave, prefixo, origem, destino_final, piloto1, piloto2, passageiros")
         .eq("data", dateKey)
         .eq("active", true),
       supabase
         .from("helicoptero_flights")
-        .select("id, data, hora, aeronave, origem, destino_final, piloto1, piloto2, passageiros")
+        .select("id, data, hora, aeronave, prefixo, origem, destino_final, piloto1, piloto2, passageiros")
         .eq("data", dateKey)
         .eq("active", true),
     ])
