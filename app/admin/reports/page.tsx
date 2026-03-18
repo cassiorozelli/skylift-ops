@@ -1,74 +1,119 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabaseClient"
+import {
+  getRecipients,
+  addRecipient,
+  updateRecipient,
+  deleteRecipient,
+  isValidEmail,
+} from "@/lib/dailyReportRecipients"
+import type { DailyReportRecipient } from "@/types/database"
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Loader2, Plus, Trash2 } from "lucide-react"
-
-type Recipient = {
-  id: string
-  email: string
-  send_mono: boolean
-  send_jato: boolean
-  send_helicoptero: boolean
-  send_all: boolean
-  active: boolean
-}
+import { Loader2, Plus, Trash2, CheckCircle2 } from "lucide-react"
 
 export default function ReportsPage() {
-  const [recipients, setRecipients] = useState<Recipient[]>([])
+  const [recipients, setRecipients] = useState<DailyReportRecipient[]>([])
   const [loading, setLoading] = useState(true)
   const [newEmail, setNewEmail] = useState("")
   const [saving, setSaving] = useState(false)
+  const [addError, setAddError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  const fetchRecipients = async () => {
-    const { data } = await supabase
-      .from("daily_report_recipients")
-      .select("*")
-      .order("created_at", { ascending: false })
-    setRecipients((data ?? []) as Recipient[])
-  }
+  const fetchRecipients = useCallback(async () => {
+    const data = await getRecipients(supabase)
+    setRecipients(data)
+  }, [])
 
   useEffect(() => {
     fetchRecipients().finally(() => setLoading(false))
-  }, [])
+  }, [fetchRecipients])
 
-  const addRecipient = async () => {
-    const email = newEmail.trim().toLowerCase()
-    if (!email) return
-    setSaving(true)
-    const { error } = await supabase.from("daily_report_recipients").insert({
-      email,
-      send_mono: false,
-      send_jato: false,
-      send_helicoptero: false,
-      send_all: false,
-      active: true,
-    })
-    if (!error) {
-      setNewEmail("")
-      fetchRecipients()
-    }
-    setSaving(false)
+  const showSuccess = (msg: string) => {
+    setSuccessMessage(msg)
+    setAddError(null)
+    setTimeout(() => setSuccessMessage(null), 3000)
   }
 
-  const updateRecipient = async (
+  const handleAdd = async () => {
+    const email = newEmail.trim().toLowerCase()
+    setAddError(null)
+    if (!email) {
+      setAddError("Enter an email address.")
+      return
+    }
+    if (!isValidEmail(email)) {
+      setAddError("Invalid email address.")
+      return
+    }
+    setSaving(true)
+    const { data, error } = await addRecipient(supabase, email)
+    setSaving(false)
+    if (error) {
+      setAddError(error.message)
+      return
+    }
+    setNewEmail("")
+    await fetchRecipients()
+    showSuccess("Recipient added.")
+  }
+
+  const handleUpdate = async (
     id: string,
-    field: keyof Recipient,
+    field: keyof Pick<
+      DailyReportRecipient,
+      "send_mono" | "send_jato" | "send_helicoptero" | "send_all" | "active"
+    >,
     value: boolean
   ) => {
-    await supabase
-      .from("daily_report_recipients")
-      .update({ [field]: value })
-      .eq("id", id)
-    fetchRecipients()
+    const prev = recipients.find((r) => r.id === id)
+    if (!prev) return
+
+    // Optimistic update
+    setRecipients((list) =>
+      list.map((r) =>
+        r.id === id ? { ...r, [field]: value } : r
+      )
+    )
+    setUpdatingId(id)
+
+    // If turning "All" on, clear Mono/Jato/Helicoptero so backend rule holds
+    const updates: Partial<DailyReportRecipient> = { [field]: value }
+    if (field === "send_all" && value === true) {
+      updates.send_mono = false
+      updates.send_jato = false
+      updates.send_helicoptero = false
+    }
+
+    const { error } = await updateRecipient(supabase, id, updates)
+    setUpdatingId(null)
+    if (error) {
+      setRecipients((list) =>
+        list.map((r) => (r.id === id ? { ...r, ...prev } : r))
+      )
+      setAddError(error.message)
+      setTimeout(() => setAddError(null), 4000)
+      return
+    }
+    showSuccess("Updated.")
   }
 
-  const removeRecipient = async (id: string) => {
-    await supabase.from("daily_report_recipients").delete().eq("id", id)
-    fetchRecipients()
+  const handleDelete = async (id: string) => {
+    setDeletingId(id)
+    const { error } = await deleteRecipient(supabase, id)
+    setDeletingId(null)
+    if (error) {
+      setAddError(error.message)
+      setTimeout(() => setAddError(null), 4000)
+      return
+    }
+    await fetchRecipients()
+    showSuccess("Recipient removed.")
   }
 
   if (loading) {
@@ -86,22 +131,43 @@ export default function ReportsPage() {
       </h1>
       <p className="text-gray-600">
         Configure who receives daily flight schedule emails and which categories
-        (Mono, Jato, Helicoptero, or All).
+        (Mono, Jato, Helicoptero, or All). When &quot;All&quot; is on, category
+        toggles are ignored. Emails are sent by n8n on a daily schedule.
       </p>
 
-      <div className="flex gap-2">
+      {successMessage && (
+        <div className="flex items-center gap-2 rounded-md bg-green-50 px-3 py-2 text-sm text-green-800">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          {successMessage}
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center gap-2">
         <Input
           type="email"
           placeholder="email@company.com"
           value={newEmail}
-          onChange={(e) => setNewEmail(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && addRecipient()}
+          onChange={(e) => {
+            setNewEmail(e.target.value)
+            setAddError(null)
+          }}
+          onKeyDown={(e) => e.key === "Enter" && handleAdd()}
           className="max-w-xs"
+          aria-invalid={!!addError}
         />
-        <Button onClick={addRecipient} disabled={saving}>
-          <Plus className="h-4 w-4 mr-2" />
+        <Button onClick={handleAdd} disabled={saving}>
+          {saving ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Plus className="h-4 w-4 mr-2" />
+          )}
           Add
         </Button>
+        {addError && (
+          <p className="w-full text-sm text-red-600" role="alert">
+            {addError}
+          </p>
+        )}
       </div>
 
       <div className="rounded-lg border border-gray-200 bg-white overflow-x-auto">
@@ -136,41 +202,38 @@ export default function ReportsPage() {
                 <td className="px-4 py-3 text-center">
                   <Switch
                     checked={r.send_mono}
-                    onCheckedChange={(v) =>
-                      updateRecipient(r.id, "send_mono", v)
-                    }
+                    disabled={updatingId === r.id || r.send_all}
+                    onCheckedChange={(v) => handleUpdate(r.id, "send_mono", v)}
                   />
                 </td>
                 <td className="px-4 py-3 text-center">
                   <Switch
                     checked={r.send_jato}
-                    onCheckedChange={(v) =>
-                      updateRecipient(r.id, "send_jato", v)
-                    }
+                    disabled={updatingId === r.id || r.send_all}
+                    onCheckedChange={(v) => handleUpdate(r.id, "send_jato", v)}
                   />
                 </td>
                 <td className="px-4 py-3 text-center">
                   <Switch
                     checked={r.send_helicoptero}
+                    disabled={updatingId === r.id || r.send_all}
                     onCheckedChange={(v) =>
-                      updateRecipient(r.id, "send_helicoptero", v)
+                      handleUpdate(r.id, "send_helicoptero", v)
                     }
                   />
                 </td>
                 <td className="px-4 py-3 text-center">
                   <Switch
                     checked={r.send_all}
-                    onCheckedChange={(v) =>
-                      updateRecipient(r.id, "send_all", v)
-                    }
+                    disabled={updatingId === r.id}
+                    onCheckedChange={(v) => handleUpdate(r.id, "send_all", v)}
                   />
                 </td>
                 <td className="px-4 py-3 text-center">
                   <Switch
                     checked={r.active}
-                    onCheckedChange={(v) =>
-                      updateRecipient(r.id, "active", v)
-                    }
+                    disabled={updatingId === r.id}
+                    onCheckedChange={(v) => handleUpdate(r.id, "active", v)}
                   />
                 </td>
                 <td className="px-4 py-3">
@@ -178,9 +241,14 @@ export default function ReportsPage() {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                    onClick={() => removeRecipient(r.id)}
+                    onClick={() => handleDelete(r.id)}
+                    disabled={deletingId === r.id}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    {deletingId === r.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
                   </Button>
                 </td>
               </tr>

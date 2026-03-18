@@ -12,11 +12,11 @@ CREATE TABLE IF NOT EXISTS daily_report_recipients (
 
 ALTER TABLE daily_report_recipients ENABLE ROW LEVEL SECURITY;
 
--- Admins (profiles.role or admin_users) can manage
+-- Admins (profiles.role or admin_users by JWT email) can manage; avoid reading auth.users
 CREATE POLICY "Admins can manage daily_report_recipients"
   ON daily_report_recipients FOR ALL TO authenticated
   USING (
     EXISTS (SELECT 1 FROM profiles p WHERE p.id = auth.uid() AND p.role = 'admin')
-    OR EXISTS (SELECT 1 FROM admin_users au WHERE au.email = (SELECT email FROM auth.users WHERE id = auth.uid()))
+    OR EXISTS (SELECT 1 FROM admin_users au WHERE au.email = (auth.jwt() ->> 'email'))
   )
   WITH CHECK (true);
