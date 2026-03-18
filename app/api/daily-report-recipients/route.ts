@@ -45,11 +45,11 @@ function buildResponse(recipients: DailyReportRecipient[]): DailyReportRecipient
   }
 
   const result: DailyReportRecipientItem[] = []
-  for (const [email, categoryArrays] of byEmail) {
+  Array.from(byEmail.entries()).forEach(([email, categoryArrays]) => {
     const categories = mergeCategories(categoryArrays)
-    if (categories.length === 0) continue
+    if (categories.length === 0) return
     result.push({ email, categories })
-  }
+  })
   result.sort((a, b) => a.email.localeCompare(b.email))
   return result
 }
