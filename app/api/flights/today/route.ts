@@ -17,6 +17,7 @@ export type TodayFlightItem = {
   destination: string
   operator: string
   pilot: string
+  passengers: string
 }
 
 /** Normalize time to HH:mm. */
@@ -58,6 +59,7 @@ function toItem(
     destination: (f.destino_final ?? "").trim(),
     operator: "",
     pilot: formatPilot(f.piloto1, f.piloto2),
+    passengers: (f.passageiros ?? "").trim(),
   }
 }
 
