@@ -76,34 +76,31 @@ function toItem(
 export async function GET() {
   try {
     const supabase = getSupabaseServer()
-    const dateKey = getTodayBrazil()
 
+    // TEMPORARY: no date filter — fetch all active flights to verify Supabase fetch
     const [monoRes, jatoRes, heliRes] = await Promise.all([
       supabase
         .from("mono_flights")
         .select("id, data, hora, aeronave, prefixo, origem, destino_final, piloto1, piloto2, passageiros")
-        .eq("data", dateKey)
         .eq("active", true),
       supabase
         .from("jato_flights")
         .select("id, data, hora, aeronave, prefixo, origem, destino_final, piloto1, piloto2, passageiros")
-        .eq("data", dateKey)
         .eq("active", true),
       supabase
         .from("helicoptero_flights")
         .select("id, data, hora, aeronave, prefixo, origem, destino_final, piloto1, piloto2, passageiros")
-        .eq("data", dateKey)
         .eq("active", true),
     ])
 
     const mono = ((monoRes.data ?? []) as FlightRow[]).map((f) =>
-      toItem(f, "mono", dateKey)
+      toItem(f, "mono", f.data ?? "")
     )
     const jato = ((jatoRes.data ?? []) as FlightRow[]).map((f) =>
-      toItem(f, "jato", dateKey)
+      toItem(f, "jato", f.data ?? "")
     )
     const helicoptero = ((heliRes.data ?? []) as FlightRow[]).map((f) =>
-      toItem(f, "helicoptero", dateKey)
+      toItem(f, "helicoptero", f.data ?? "")
     )
 
     const all: TodayFlightItem[] = [...mono, ...jato, ...helicoptero].sort(
