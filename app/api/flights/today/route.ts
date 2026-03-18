@@ -16,12 +16,18 @@ export type TodayFlightItem = {
   pilot: string
 }
 
-/** Parse "CGP x GIG" or "CGP → GIG" into { origin, destination }. */
+/** Parse "CGP x GIG", "CGP - GIG", "CGP → GIG" into { origin, destination }. Normalize separators to "x". */
 function parseRoute(destino: string | null): { origin: string; destination: string } {
   const r = (destino ?? "").trim()
   if (!r) return { origin: "", destination: "" }
-  const match = r.match(/(.+?)\s+(?:x|→|para)\s+(.+)/i)
-  if (match) return { origin: match[1].trim(), destination: match[2].trim() }
+  const normalized = r.replace(/\s*→\s*/g, " x ").replace(/\s*-\s*/g, " x ")
+  const match = normalized.match(/^(.+?)\s+x\s+(.+)$/i)
+  if (match) {
+    return {
+      origin: (match[1] ?? "").trim(),
+      destination: (match[2] ?? "").trim(),
+    }
+  }
   return { origin: "", destination: r }
 }
 
@@ -44,21 +50,27 @@ function getTodayBrazil(): string {
   })
 }
 
+function formatPilot(piloto1: string | null | undefined, piloto2: string | null | undefined): string {
+  const p1 = (piloto1 ?? "").trim()
+  const p2 = (piloto2 ?? "").trim()
+  if (p1 && p2) return `${p1} / ${p2}`
+  return p1 || p2 || ""
+}
+
 function toItem(
   f: Flight,
   aircraftType: AircraftType,
   dateKey: string
 ): TodayFlightItem {
-  const { origin, destination } = parseRoute(f.destino)
-  const pilot = [f.piloto1, f.piloto2].filter(Boolean).join(", ") || ""
+  const { origin, destination } = parseRoute(f.destino ?? null)
   return {
-    date: dateKey,
-    time: normalizeTime(f.hora),
+    date: dateKey ?? "",
+    time: normalizeTime(f.hora ?? null),
     aircraft_type: aircraftType,
     origin: origin || "",
     destination: destination || "",
     operator: "",
-    pilot,
+    pilot: formatPilot(f.piloto1, f.piloto2),
   }
 }
 
