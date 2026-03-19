@@ -54,7 +54,7 @@ function toItem(
     operator: "",
     pilot: formatPilot(f.piloto1, f.piloto2),
     passengers: (f.passageiros ?? "").trim(),
-    aircraft: (f.aeronave ?? f.prefixo ?? "").trim(), // ✅ CORRIGIDO
+    aircraft: (f.aeronave ?? f.prefixo ?? "").trim(),
   }
 }
 
@@ -62,56 +62,61 @@ export async function GET() {
   try {
     const supabase = getSupabaseServer()
 
-    // 🔥 pega data do banco
+    // 🔥 pega a data direto do banco
     const { data: today, error } = await supabase.rpc("get_today")
     if (error) throw error
 
-    console.log("TODAY FROM DB:", today)
-    console.log("TYPE OF TODAY:", typeof today)
+    const todayStr = String(today)
+
+    // 🔥 intervalo do dia (resolve timestamp vs date)
+    const start = todayStr + "T00:00:00"
+    const end = todayStr + "T23:59:59"
+
+    console.log("TODAY:", todayStr)
+    console.log("START:", start)
+    console.log("END:", end)
 
     const [monoRes, jatoRes, heliRes] = await Promise.all([
       supabase
         .from("mono_flights")
         .select("*")
-        .eq("data", today)
+        .gte("data", start)
+        .lte("data", end)
         .eq("active", true),
 
       supabase
         .from("jato_flights")
         .select("*")
-        .eq("data", today)
+        .gte("data", start)
+        .lte("data", end)
         .eq("active", true),
 
       supabase
         .from("helicoptero_flights")
         .select("*")
-        .eq("data", today)
+        .gte("data", start)
+        .lte("data", end)
         .eq("active", true),
     ])
 
-    // 🔥 DEBUG CRÍTICO
     console.log("MONO COUNT:", monoRes.data?.length)
     console.log("JATO COUNT:", jatoRes.data?.length)
     console.log("HELI COUNT:", heliRes.data?.length)
-
-    console.log("HELI RAW:", heliRes.data)
 
     if (monoRes.error) console.error("MONO ERROR:", monoRes.error)
     if (jatoRes.error) console.error("JATO ERROR:", jatoRes.error)
     if (heliRes.error) console.error("HELI ERROR:", heliRes.error)
 
-    const dateStr = String(today)
-
     const monoFlights = (monoRes.data ?? []).map((f) =>
-      toItem(f as FlightRow, "mono", dateStr)
+      toItem(f as FlightRow, "mono", todayStr)
     )
 
     const jatoFlights = (jatoRes.data ?? []).map((f) =>
-      toItem(f as FlightRow, "jato", dateStr)
+      toItem(f as FlightRow, "jato", todayStr)
     )
 
     const helicopteroFlights = (heliRes.data ?? []).map((f) =>
-      toItem(f as FlightRow, "helicoptero", dateStr)
+      toItem(f as FlightRow, "helicoptero", todayStr)
     )
 
     const allFlights = [
