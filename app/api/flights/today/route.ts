@@ -62,40 +62,32 @@ export async function GET() {
   try {
     const supabase = getSupabaseServer()
 
-    // 🔥 pega a data direto do banco
+    // ✅ pega a data diretamente do banco (já no timezone correto)
     const { data: today, error } = await supabase.rpc("get_today")
     if (error) throw error
 
-    const todayStr = String(today)
+    const todayStr = String(today).slice(0, 10)
 
-    // 🔥 intervalo do dia (resolve timestamp vs date)
-    const start = todayStr + "T00:00:00"
-    const end = todayStr + "T23:59:59"
+    console.log("TODAY (DB):", todayStr)
 
-    console.log("TODAY:", todayStr)
-    console.log("START:", start)
-    console.log("END:", end)
-
+    // ✅ filtro correto: comparação direta com DATE (sem timezone)
     const [monoRes, jatoRes, heliRes] = await Promise.all([
       supabase
         .from("mono_flights")
         .select("*")
-        .gte("data", start)
-        .lte("data", end)
+        .eq("data", todayStr)
         .eq("active", true),
 
       supabase
         .from("jato_flights")
         .select("*")
-        .gte("data", start)
-        .lte("data", end)
+        .eq("data", todayStr)
         .eq("active", true),
 
       supabase
         .from("helicoptero_flights")
         .select("*")
-        .gte("data", start)
-        .lte("data", end)
+        .eq("data", todayStr)
         .eq("active", true),
     ])
 
